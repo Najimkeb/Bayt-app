@@ -9,6 +9,10 @@
     "node": ">=20"
   },
   "scripts": {
+    "dev": "pnpm run --parallel --filter \"./apps/*\" dev",
+    "dev:api": "pnpm --filter @bayt/api dev",
+    "dev:web": "pnpm --filter @bayt/web dev",
+    "db:reset": "pnpm --filter @bayt/api db:reset:local",
     "build": "pnpm -r --filter \"./packages/**\" build",
     "typecheck": "pnpm run build && pnpm -r typecheck",
     "test": "pnpm -r test",

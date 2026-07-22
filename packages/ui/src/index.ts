@@ -1,10 +1,11 @@
 /**
  * `@bayt/ui` — bibliotheque de composants partagee (shadcn/ui + Tailwind).
  *
- * Squelette volontairement vide : les composants arriveront avec la premiere
- * tranche verticale « Reviser une carte », pas avant. On evite tout composant
- * specule sans ecran reel pour le valider.
+ * N'y vit que ce qui est reellement partageable et sans etat. Les composants
+ * porteurs d'une intention produit (carte de revision, mascotte) restent dans
+ * l'application qui les utilise, tant qu'un second usage ne les justifie pas.
  */
 
-/** Marqueur de paquet, remplace des l'arrivee des premiers composants. */
-export const UI_PACKAGE_NAME = '@bayt/ui';
+export { Button, buttonVariants, type ButtonProps } from './components/button.js';
+export { Surface } from './components/surface.js';
+export { cn } from './lib/cn.js';

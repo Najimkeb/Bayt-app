@@ -24,6 +24,11 @@ export const dueQueueQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(MAX_QUEUE_LIMIT).optional(),
 });
 
+export const previewQuerySchema = z.object({
+  userId,
+  itemId: z.string().min(1).max(128),
+});
+
 export const submitReviewBodySchema = z.object({
   userId,
   itemId: z.string().min(1).max(128),

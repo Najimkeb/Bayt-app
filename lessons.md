@@ -36,5 +36,11 @@ Drizzle (`drizzle-orm/d1` + `drizzle-kit`) donne un schéma type-safe et des mig
 **L011 — Une carte sans ligne `scheduling_state` = carte neuve.**
 Pas de pré-remplissage à l'ingestion : la file fait un LEFT JOIN et l'état FSRS est matérialisé à la **première révision**. Moins d'écritures, pas de migration de masse à chaque nouvel item, et `(user_id, due)` reste l'index de la file.
 
+**L012 — État serveur = TanStack Query ; le front ne calcule jamais un intervalle.**
+Le cache de la file **est** la session de révision : une note retire la carte du cache immédiatement (mise à jour optimiste + rollback sur erreur), donc l'enchaînement est instantané sans état local dupliqué. Les intervalles des 4 boutons viennent de `GET /reviews/preview` — jamais d'un calcul FSRS côté client. Corollaire : dev local = deux process (`pnpm dev` à la racine lance wrangler + Next en parallèle), CORS activé sur le Worker pour `localhost:3000`, URL de l'API dans `NEXT_PUBLIC_API_URL`.
+
+**L013 — Carte retournable : la face cachée doit sortir de l'arbre d'accessibilité.**
+Les deux faces coexistent dans le DOM pour le flip 3D. Sans `aria-hidden` + `inert` sur la face cachée, un lecteur d'écran annonce la réponse **avant** que l'apprenant ne la révèle — la promesse d'active recall est cassée pour ces utilisateurs. Détecté par un test composant, pas à l'œil.
+
 **L005 — Convention de cette mémoire.**
 Une leçon = une entrée courte et actionnable. Noter le nouveau et le confirmé, pas le déjà-écrit. Mettre à jour une leçon plutôt que la dupliquer.

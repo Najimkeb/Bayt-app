@@ -55,6 +55,69 @@ describe('GET /reviews/queue', () => {
   });
 });
 
+describe('GET /reviews/preview', () => {
+  it('renvoie les 4 issues, a intervalles croissants', async () => {
+    const response = await app.request('/reviews/preview?userId=demo&itemId=item-a');
+
+    expect(response.status).toBe(200);
+
+    const body = (await response.json()) as {
+      outcomes: { grade: string; intervalMs: number }[];
+    };
+
+    expect(body.outcomes.map((outcome) => outcome.grade)).toEqual([
+      'Again',
+      'Hard',
+      'Good',
+      'Easy',
+    ]);
+
+    const intervals = body.outcomes.map((outcome) => outcome.intervalMs);
+    expect(intervals).toEqual([...intervals].sort((a, b) => a - b));
+  });
+
+  it('n\'enregistre rien : c\'est une projection', async () => {
+    await app.request('/reviews/preview?userId=demo&itemId=item-a');
+
+    expect(repository.logs).toHaveLength(0);
+    expect(repository.stateOf('demo', 'item-a')).toBeNull();
+  });
+
+  it('renvoie 404 sur un item inconnu', async () => {
+    const response = await app.request('/reviews/preview?userId=demo&itemId=inconnu');
+
+    expect(response.status).toBe(404);
+  });
+
+  it('rejette une requete incomplete', async () => {
+    expect((await app.request('/reviews/preview?userId=demo')).status).toBe(400);
+  });
+});
+
+describe('CORS', () => {
+  it('autorise le front de developpement', async () => {
+    const response = await app.request('/reviews/queue?userId=demo', {
+      headers: { origin: 'http://localhost:3000' },
+    });
+
+    expect(response.headers.get('access-control-allow-origin')).toBe('http://localhost:3000');
+  });
+
+  it('repond au preflight d\'une revision', async () => {
+    const response = await app.request('/reviews', {
+      method: 'OPTIONS',
+      headers: {
+        origin: 'http://localhost:3000',
+        'access-control-request-method': 'POST',
+        'access-control-request-headers': 'content-type',
+      },
+    });
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get('access-control-allow-methods')).toContain('POST');
+  });
+});
+
 describe('POST /reviews', () => {
   const post = async (body: unknown): Promise<Response> =>
     app.request('/reviews', {

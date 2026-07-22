@@ -1,12 +1,14 @@
 import { Scheduler } from '@bayt/domain';
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 
 import { ItemNotFoundError } from '../application/errors.js';
 import type { ReviewRepository } from '../application/ports/review-repository.js';
 import { GetDueQueue } from '../application/use-cases/get-due-queue.js';
+import { PreviewReview } from '../application/use-cases/preview-review.js';
 import { SubmitReview } from '../application/use-cases/submit-review.js';
-import { presentDueCard, presentReviewResult } from './presenters.js';
-import { dueQueueQuerySchema, submitReviewBodySchema } from './schemas.js';
+import { presentDueCard, presentPreview, presentReviewResult } from './presenters.js';
+import { dueQueueQuerySchema, previewQuerySchema, submitReviewBodySchema } from './schemas.js';
 
 /** Dependances injectees dans l'application HTTP. */
 export interface AppDependencies {
@@ -14,7 +16,17 @@ export interface AppDependencies {
   readonly scheduler: Scheduler;
   /** Horloge injectable — la rend testable et le handler pur. */
   readonly clock?: () => Date;
+  /**
+   * Origines autorisees a appeler l'API depuis un navigateur.
+   *
+   * En developpement, le front Next.js tourne sur un autre port que le Worker :
+   * sans CORS, le navigateur bloque les requetes.
+   */
+  readonly allowedOrigins?: readonly string[];
 }
+
+/** Origines de developpement local (Next.js). */
+const DEV_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000'] as const;
 
 /**
  * Application HTTP « Reviser une carte ».
@@ -23,11 +35,26 @@ export interface AppDependencies {
  * presente. Elle ignore tout de D1 — c'est le point d'entree Worker qui choisit
  * l'implementation du repository.
  */
-export function createApp({ repository, scheduler, clock = () => new Date() }: AppDependencies) {
+export function createApp({
+  repository,
+  scheduler,
+  clock = () => new Date(),
+  allowedOrigins = DEV_ORIGINS,
+}: AppDependencies) {
   const getDueQueue = new GetDueQueue(repository, scheduler);
+  const previewReview = new PreviewReview(repository, scheduler);
   const submitReview = new SubmitReview(repository, scheduler);
 
   const app = new Hono();
+
+  app.use(
+    '*',
+    cors({
+      origin: [...allowedOrigins],
+      allowMethods: ['GET', 'POST', 'OPTIONS'],
+      allowHeaders: ['Content-Type'],
+    }),
+  );
 
   /** Sonde de vie, utile en local comme en production. */
   app.get('/health', (context) => context.json({ status: 'ok', now: clock().toISOString() }));
@@ -51,6 +78,35 @@ export function createApp({ repository, scheduler, clock = () => new Date() }: A
       count: cards.length,
       cards: cards.map(presentDueCard),
     });
+  });
+
+  /**
+   * Projection des 4 issues possibles pour une carte — sans rien enregistrer.
+   * Alimente l'intervalle affiche sous chaque bouton de notation.
+   */
+  app.get('/reviews/preview', async (context) => {
+    const query = previewQuerySchema.safeParse({
+      userId: context.req.query('userId'),
+      itemId: context.req.query('itemId'),
+    });
+
+    if (!query.success) {
+      return context.json({ error: 'invalid_request', details: query.error.issues }, 400);
+    }
+
+    const now = clock();
+
+    try {
+      const preview = await previewReview.execute(query.data.userId, query.data.itemId, now);
+
+      return context.json(presentPreview(query.data.itemId, now, preview));
+    } catch (error) {
+      if (error instanceof ItemNotFoundError) {
+        return context.json({ error: 'item_not_found', itemId: error.itemId }, 404);
+      }
+
+      throw error;
+    }
   });
 
   /** Enregistre une revision et replanifie la carte. */

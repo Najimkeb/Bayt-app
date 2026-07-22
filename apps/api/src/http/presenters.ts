@@ -1,7 +1,8 @@
-import type { SchedulingState } from '@bayt/domain';
+import type { SchedulingPreview, SchedulingState } from '@bayt/domain';
 
 import type { DueCard } from '../application/use-cases/get-due-queue.js';
 import type { SubmitReviewResult } from '../application/use-cases/submit-review.js';
+import type { DueCardDto, PreviewDto, ReviewResultDto, SchedulingStateDto } from './dto.js';
 
 /**
  * Traduction du domaine vers le contrat HTTP.
@@ -10,16 +11,6 @@ import type { SubmitReviewResult } from '../application/use-cases/submit-review.
  * consommable par le client. La representation interne (epoch ms en base,
  * `Date` dans le domaine) reste invisible.
  */
-
-interface SchedulingStateDto {
-  readonly state: SchedulingState['state'];
-  readonly stability: number;
-  readonly difficulty: number;
-  readonly due: string;
-  readonly lastReviewedAt: string | null;
-  readonly reps: number;
-  readonly lapses: number;
-}
 
 function presentState(state: SchedulingState): SchedulingStateDto {
   return {
@@ -34,7 +25,7 @@ function presentState(state: SchedulingState): SchedulingStateDto {
 }
 
 /** Une carte de la file de revision. */
-export function presentDueCard(card: DueCard): unknown {
+export function presentDueCard(card: DueCard): DueCardDto {
   return {
     item: card.item,
     scheduling: presentState(card.state),
@@ -42,8 +33,25 @@ export function presentDueCard(card: DueCard): unknown {
   };
 }
 
+/** Les 4 issues possibles, pour alimenter les boutons de notation. */
+export function presentPreview(
+  itemId: string,
+  now: Date,
+  preview: SchedulingPreview,
+): PreviewDto {
+  return {
+    itemId,
+    now: now.toISOString(),
+    outcomes: preview.map((outcome) => ({
+      grade: outcome.grade,
+      intervalMs: outcome.intervalMs,
+      due: outcome.state.due.toISOString(),
+    })),
+  };
+}
+
 /** Le resultat d'une revision, avec de quoi alimenter le feedback de l'UI. */
-export function presentReviewResult(result: SubmitReviewResult): unknown {
+export function presentReviewResult(result: SubmitReviewResult): ReviewResultDto {
   return {
     item: result.item,
     scheduling: presentState(result.state),

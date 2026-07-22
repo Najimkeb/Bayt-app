@@ -2,18 +2,38 @@
   "name": "@bayt/web",
   "version": "0.1.0",
   "private": true,
-  "description": "Application Next.js BAYT (squelette — integration a l'etape suivante)",
+  "description": "Application Next.js BAYT — ecran de revision",
   "type": "module",
-  "main": "./src/index.ts",
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@bayt/domain": "workspace:*",
-    "@bayt/ui": "workspace:*"
+    "@bayt/ui": "workspace:*",
+    "@tanstack/react-query": "^5.101.4",
+    "framer-motion": "^12.42.2",
+    "next": "^16.2.11",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
     "@bayt/config": "workspace:*",
-    "typescript": "^5.7.3"
+    "@tailwindcss/postcss": "^4.3.3",
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "jsdom": "^29.1.1",
+    "postcss": "^8.5.22",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
   }
 }

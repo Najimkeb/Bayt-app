@@ -1,0 +1,185 @@
+@import 'tailwindcss';
+
+/*
+ * Direction artistique BAYT — chaleureuse, premium, epuree.
+ *
+ * Palette : sable et terre cuite. Elle doit evoquer une maison accueillante
+ * (bayt), pas un tableau de bord. Le contraste vise WCAG 2.2 AA sur tous les
+ * couples texte / fond, en clair comme en sombre.
+ */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-background: #fbf7f2;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f4eee6;
+  --color-foreground: #1c1917;
+  --color-muted-foreground: #635a50;
+  --color-border: #e9e0d5;
+
+  --color-primary: #b4552f;
+  --color-primary-hover: #9c4726;
+  --color-primary-foreground: #ffffff;
+  --color-ring: #b4552f;
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+
+.dark {
+  --color-background: #14100d;
+  --color-surface: #1e1815;
+  --color-surface-hover: #2a221d;
+  --color-foreground: #f6f1ea;
+  --color-muted-foreground: #b5a99c;
+  --color-border: #322a24;
+
+  --color-primary: #e07a4e;
+  --color-primary-hover: #ef8a5d;
+  --color-primary-foreground: #1a120c;
+  --color-ring: #e07a4e;
+}
+
+/*
+ * Couleurs des 4 notes.
+ *
+ * Chaque note a un fond teinte et une encre dediee : la couleur n'est jamais
+ * le seul indice (le libelle et le raccourci clavier restent lisibles sans
+ * perception des couleurs — WCAG 1.4.1).
+ */
+:root {
+  --grade-again-soft: #fdeceb;
+  --grade-again-ink: #a1382c;
+  --grade-again-line: #f6d3d0;
+
+  --grade-hard-soft: #fbf0dd;
+  --grade-hard-ink: #8a5a12;
+  --grade-hard-line: #f0dcbb;
+
+  --grade-good-soft: #e6f4ee;
+  --grade-good-ink: #1f6b4f;
+  --grade-good-line: #c7e6d8;
+
+  --grade-easy-soft: #e9f0fd;
+  --grade-easy-ink: #2a5599;
+  --grade-easy-line: #cfdefa;
+}
+
+.dark {
+  --grade-again-soft: #35201d;
+  --grade-again-ink: #f5b5ad;
+  --grade-again-line: #4d2c27;
+
+  --grade-hard-soft: #332715;
+  --grade-hard-ink: #efc987;
+  --grade-hard-line: #4a381d;
+
+  --grade-good-soft: #172e26;
+  --grade-good-ink: #8fd8ba;
+  --grade-good-line: #23443a;
+
+  --grade-easy-soft: #1a2438;
+  --grade-easy-ink: #a9c6f5;
+  --grade-easy-line: #27354f;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Anneau de focus homogene et toujours visible (WCAG 2.2 — 2.4.11). */
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Bouton de notation : fond teinte, encre dediee, cible tactile confortable. */
+  .grade-button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+    min-height: 4.5rem;
+    padding: 0.75rem 0.5rem;
+    border-radius: 1rem;
+    border: 1px solid var(--grade-line);
+    background-color: var(--grade-soft);
+    color: var(--grade-ink);
+    font-weight: 600;
+    transition:
+      transform 180ms ease-out,
+      filter 180ms ease-out;
+  }
+
+  .grade-button:hover:not(:disabled) {
+    filter: brightness(0.97);
+    transform: translateY(-2px);
+  }
+
+  .grade-button:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+  }
+
+  .grade-button:disabled {
+    opacity: 0.55;
+  }
+
+  .grade-again {
+    --grade-soft: var(--grade-again-soft);
+    --grade-ink: var(--grade-again-ink);
+    --grade-line: var(--grade-again-line);
+  }
+
+  .grade-hard {
+    --grade-soft: var(--grade-hard-soft);
+    --grade-ink: var(--grade-hard-ink);
+    --grade-line: var(--grade-hard-line);
+  }
+
+  .grade-good {
+    --grade-soft: var(--grade-good-soft);
+    --grade-ink: var(--grade-good-ink);
+    --grade-line: var(--grade-good-line);
+  }
+
+  .grade-easy {
+    --grade-soft: var(--grade-easy-soft);
+    --grade-ink: var(--grade-easy-ink);
+    --grade-line: var(--grade-easy-line);
+  }
+
+  /* Faces de la carte retournable. */
+  .flip-scene {
+    perspective: 1600px;
+  }
+
+  .flip-face {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+}
