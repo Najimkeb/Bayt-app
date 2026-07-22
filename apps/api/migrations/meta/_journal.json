@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1784753478635,
+      "tag": "0000_learning_engine",
+      "breakpoints": true
+    }
+  ]
+}

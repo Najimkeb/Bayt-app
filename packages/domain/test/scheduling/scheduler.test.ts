@@ -196,6 +196,14 @@ describe('Scheduler — retrievability', () => {
     expect(scheduler.retrievability(scheduler.newState(T0), T0)).toBe(0);
   });
 
+  it('vaut 0 sans jamais lever, meme sur un etat incoherent', () => {
+    // Etat improbable (planifie mais sans revision passee) : le domaine doit
+    // repondre, pas propager une erreur du moteur sous-jacent.
+    const inconsistent = { ...scheduler.newState(T0), state: 'review' as const };
+
+    expect(scheduler.retrievability(inconsistent, addDays(T0, 5))).toBe(0);
+  });
+
   it('reste elevee juste apres une bonne revision', () => {
     const { state, now } = reviewedCard(scheduler);
 

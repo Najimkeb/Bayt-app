@@ -1,8 +1,11 @@
 {
   "extends": "@bayt/config/tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    /* Le Worker s'execute sur workerd, pas sur Node : c'est le runtime
+       Cloudflare qui fournit Request/Response/D1Database. */
+    "types": ["@cloudflare/workers-types", "vitest/globals"]
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*.ts", "test/**/*.ts", "*.config.ts"],
+  "exclude": ["node_modules", ".wrangler"]
 }

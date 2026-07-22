@@ -30,5 +30,11 @@ Les paliers d'apprentissage court terme (minutes) font partie de l'état persist
 **L009 — Le plafond `maximumInterval` n'est pas strict.**
 FSRS applique le plafond puis force l'ordre strict des 4 boutons (`Again` < `Hard` < `Good` < `Easy`), ce qui peut dépasser le plafond de 3 jours max. Ne pas écrire de test ni de règle métier supposant un plafond dur.
 
+**L010 — Persistance : Drizzle sur D1, et la frontière domaine ↔ base est explicite.**
+Drizzle (`drizzle-orm/d1` + `drizzle-kit`) donne un schéma type-safe et des migrations SQL versionnées, sans runtime lourd — compatible Workers. La frontière : `packages/domain` ignore D1/Drizzle/Hono ; `apps/api` porte la persistance via le **port** `ReviewRepository` (implémentations D1 **et** InMemory). Les cas d'usage et l'app Hono se testent donc **sans D1 ni Worker**. Les dates sont stockées en **epoch ms** (entiers, comparables, indexables) et converties en `Date` par les mappers.
+
+**L011 — Une carte sans ligne `scheduling_state` = carte neuve.**
+Pas de pré-remplissage à l'ingestion : la file fait un LEFT JOIN et l'état FSRS est matérialisé à la **première révision**. Moins d'écritures, pas de migration de masse à chaque nouvel item, et `(user_id, due)` reste l'index de la file.
+
 **L005 — Convention de cette mémoire.**
 Une leçon = une entrée courte et actionnable. Noter le nouveau et le confirmé, pas le déjà-écrit. Mettre à jour une leçon plutôt que la dupliquer.

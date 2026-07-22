@@ -60,7 +60,11 @@ export function createFsrsEngine(config: ResolvedSchedulerConfig): SchedulingEng
     next: (state, grade, now) =>
       fromFsrsCard(engine.next(toFsrsCard(state), now, RATING_BY_GRADE[grade]).card),
 
-    retrievability: (state, now) => engine.get_retrievability(toFsrsCard(state), now, false),
+    // Sans revision passee, il n'y a aucune trace memoire : la probabilite de
+    // rappel est nulle par definition. Ce garde-fou evite aussi qu'une erreur
+    // de `ts-fsrs` ne franchisse la frontiere du domaine.
+    retrievability: (state, now) =>
+      state.lastReviewedAt === null ? 0 : engine.get_retrievability(toFsrsCard(state), now, false),
   };
 }
 

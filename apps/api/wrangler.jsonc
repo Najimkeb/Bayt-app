@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bayt-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-01",
+
+  // Base D1 du contexte « Learning Engine ».
+  // `database_id` n'est utilise qu'en remote : en local, wrangler cree une base
+  // SQLite sous .wrangler/state/ — aucun compte Cloudflare requis.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bayt",
+      "database_id": "local-dev-placeholder",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  "observability": {
+    "enabled": true
+  }
+}
