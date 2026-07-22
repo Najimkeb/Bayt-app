@@ -1,41 +1,44 @@
 import { cva, type VariantProps } from 'class-variance-authority';
-import type { ButtonHTMLAttributes, ForwardedRef, ReactElement } from 'react';
+import type { ButtonHTMLAttributes, CSSProperties, ForwardedRef, ReactElement } from 'react';
 import { forwardRef } from 'react';
 
 import { cn } from '../lib/cn.js';
 
 /**
- * Bouton de base BAYT.
+ * Bouton "pressable" BAYT — signature Duolingo.
  *
- * Accessibilite : anneau de focus toujours visible au clavier (`focus-visible`),
- * cible tactile d'au moins 44 px de haut sur les tailles `md` et `lg`
- * (WCAG 2.2 — 2.5.8 Target Size).
+ * Couleur pleine, liseré bas plus foncé (relief 3D), qui s'enfonce au clic. Le
+ * mecanisme visuel vit dans la classe `.pressable` (globals.css) ; ici on ne
+ * fait que poser les couleurs de chaque variante via des variables CSS.
+ *
+ * Accessibilite : texte gras et grande cible tactile (>= 44 px, WCAG 2.2 —
+ * 2.5.8), anneau de focus visible au clavier.
  */
 export const buttonVariants = cva(
   cn(
-    'inline-flex items-center justify-center gap-2 rounded-2xl font-medium',
-    'transition-[transform,background-color,box-shadow,color] duration-200 ease-out',
+    'pressable inline-flex select-none items-center justify-center gap-2 rounded-[var(--radius-button)]',
+    'font-extrabold uppercase tracking-wide',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
     'focus-visible:ring-offset-background',
-    'disabled:pointer-events-none disabled:opacity-50',
-    'active:scale-[0.98] motion-reduce:active:scale-100 motion-reduce:transition-none',
+    'disabled:pointer-events-none',
   ),
   {
     variants: {
       variant: {
-        primary: 'bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover',
-        secondary: 'bg-surface text-foreground border border-border hover:bg-surface-hover',
-        ghost: 'text-muted-foreground hover:bg-surface-hover hover:text-foreground',
+        green: '[--btn-bg:var(--color-feather-green)] [--btn-shadow:var(--color-feather-green-shadow)] [--btn-fg:#fff]',
+        red: '[--btn-bg:var(--color-cardinal)] [--btn-shadow:var(--color-cardinal-shadow)] [--btn-fg:#fff]',
+        blue: '[--btn-bg:var(--color-macaw)] [--btn-shadow:var(--color-macaw-shadow)] [--btn-fg:#fff]',
+        yellow: '[--btn-bg:var(--color-bee)] [--btn-shadow:var(--color-bee-shadow)] [--btn-fg:#4b4b4b]',
+        gray: '[--btn-bg:var(--color-surface)] [--btn-shadow:var(--color-border-strong)] [--btn-fg:var(--color-foreground)] border-2 border-border',
       },
       size: {
-        sm: 'h-9 px-3 text-sm',
-        md: 'h-11 px-5 text-sm',
-        lg: 'h-13 px-7 text-base',
-        icon: 'size-11',
+        sm: 'h-10 px-4 text-sm',
+        md: 'h-[50px] px-6 text-base',
+        lg: 'h-14 px-8 text-lg',
       },
     },
     defaultVariants: {
-      variant: 'primary',
+      variant: 'green',
       size: 'md',
     },
   },
@@ -46,7 +49,7 @@ export interface ButtonProps
     VariantProps<typeof buttonVariants> {}
 
 export const Button = forwardRef(function Button(
-  { className, variant, size, type = 'button', ...props }: ButtonProps,
+  { className, variant, size, type = 'button', style, ...props }: ButtonProps,
   ref: ForwardedRef<HTMLButtonElement>,
 ): ReactElement {
   return (
@@ -54,6 +57,7 @@ export const Button = forwardRef(function Button(
       ref={ref}
       type={type}
       className={cn(buttonVariants({ variant, size }), className)}
+      style={style as CSSProperties}
       {...props}
     />
   );

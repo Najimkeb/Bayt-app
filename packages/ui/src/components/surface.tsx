@@ -3,10 +3,10 @@ import type { HTMLAttributes, ReactElement } from 'react';
 import { cn } from '../lib/cn.js';
 
 /**
- * Surface elevee : la brique visuelle de base de BAYT (cartes, panneaux).
+ * Surface : la brique visuelle de base de BAYT (cartes, panneaux).
  *
- * Volontairement sobre — l'elevation vient d'une ombre douce et d'une bordure
- * discrete, jamais d'un contraste agressif.
+ * Style Duolingo : coins bien arrondis, bordure franche de 2 px, fond plat.
+ * Le relief vient de la bordure, pas d'une ombre lourde.
  */
 export function Surface({
   className,
@@ -15,7 +15,7 @@ export function Surface({
   return (
     <div
       className={cn(
-        'rounded-3xl border border-border bg-surface shadow-[0_1px_2px_rgba(28,25,23,0.04),0_12px_32px_-12px_rgba(28,25,23,0.12)]',
+        'rounded-[var(--radius-card)] border-2 border-border bg-surface',
         className,
       )}
       {...props}

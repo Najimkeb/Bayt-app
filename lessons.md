@@ -51,5 +51,11 @@ Depuis l'usage de `next/image`, elle compile en `moduleResolution: Bundler` (Nex
 **L016 — Ne jamais lancer `wrangler d1 execute --local` pendant que `wrangler dev` tourne.**
 Les deux processus ouvrent le même fichier SQLite : le Worker meurt au rechargement sur `SQLITE_BUSY`. Arrêter `pnpm dev` avant tout `db:reset` / `db:seed:local`.
 
+**L017 — Direction artistique : Duolingo, comme système, pas comme décor d'écran.**
+Palette Duolingo (vert #58CC02 / rouge #FF4B4B / bleu #1CB0F6 / jaune #FFC800, chacune avec sa couleur « ombre » plus foncée), typo Nunito (700/800/900), coins ~16px. Les **tokens** vivent dans `@theme` (globals.css), les **composants** dans `packages/ui` : `Button` pressable (classe `.pressable` + variables `--btn-bg/-shadow/-fg` par variante green/red/blue/yellow/gray) et `ProgressBar` chunky. L'effet 3D = `box-shadow: 0 4px 0 <ombre>` qui s'enfonce au `:active` (translate-y + ombre à 0). Nunito est chargée via `next/font/google` (fetch au build — nécessite le réseau à la compilation).
+
+**L018 — Grade → couleur : Again rouge, Hard jaune, Good vert, Easy bleu.**
+Mapping fixe des 4 boutons de notation. Feedback : flash vert sur Good/Easy, rouge sur Again/Hard (overlay décoratif `aria-hidden`, l'info reste portée par `aria-live` + la mascotte). La couleur n'est jamais le seul indice — libellé, raccourci clavier et intervalle restent lisibles (WCAG 1.4.1).
+
 **L005 — Convention de cette mémoire.**
 Une leçon = une entrée courte et actionnable. Noter le nouveau et le confirmé, pas le déjà-écrit. Mettre à jour une leçon plutôt que la dupliquer.

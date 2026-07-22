@@ -111,7 +111,7 @@ describe('Ecran de revision', () => {
     await questionText();
     expect(screen.queryByRole('group', { name: 'Noter mon rappel' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Reveler la reponse' }));
+    await user.click(screen.getByRole('button', { name: 'Révéler la réponse' }));
 
     expect(await screen.findByRole('group', { name: 'Noter mon rappel' })).toBeInTheDocument();
   });
@@ -121,16 +121,16 @@ describe('Ecran de revision', () => {
     renderSession();
 
     await questionText();
-    await user.click(screen.getByRole('button', { name: 'Reveler la reponse' }));
+    await user.click(screen.getByRole('button', { name: 'Révéler la réponse' }));
 
     // Les intervalles viennent de l'API : le front ne les calcule jamais.
     expect(
       await screen.findByRole('button', {
-        name: /Correct — Rappel correct, prochaine revision dans 10 minutes/,
+        name: /Correct — Rappel correct, prochaine révision dans 10 minutes/,
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /A revoir — Je ne savais pas, prochaine revision dans 1 minutes/ }),
+      screen.getByRole('button', { name: /À revoir — Je ne savais pas, prochaine révision dans 1 minutes/ }),
     ).toBeInTheDocument();
   });
 
@@ -139,7 +139,7 @@ describe('Ecran de revision', () => {
     renderSession();
 
     await questionText();
-    await user.click(screen.getByRole('button', { name: 'Reveler la reponse' }));
+    await user.click(screen.getByRole('button', { name: 'Révéler la réponse' }));
     await user.click(await screen.findByRole('button', { name: /Correct/ }));
 
     expect(
@@ -148,14 +148,14 @@ describe('Ecran de revision', () => {
       ),
     ).toBeInTheDocument();
     // La carte suivante repart cachee.
-    expect(screen.getByRole('button', { name: 'Reveler la reponse' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Révéler la réponse' })).toBeInTheDocument();
   });
 
   it('celebre la fin de session quand la file est vide', async () => {
     fetchDueQueue.mockResolvedValue({ now: QUEUE.now, count: 0, cards: [] });
     renderSession();
 
-    expect(await screen.findByRole('heading', { name: 'Tout est revise !' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Tout est révisé !' })).toBeInTheDocument();
   });
 
   it('signale clairement une API injoignable', async () => {
@@ -210,7 +210,7 @@ describe('Accessibilite clavier', () => {
     await questionText();
     await user.keyboard(' ');
 
-    const again = await screen.findByRole('button', { name: /A revoir/ });
+    const again = await screen.findByRole('button', { name: /À revoir/ });
     expect(again).toHaveAttribute('aria-keyshortcuts', '1');
   });
 });

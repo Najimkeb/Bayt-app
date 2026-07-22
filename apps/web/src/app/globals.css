@@ -1,87 +1,67 @@
 @import 'tailwindcss';
 
 /*
- * Direction artistique BAYT — chaleureuse, premium, epuree.
+ * Direction artistique BAYT — inspiration Duolingo.
  *
- * Palette : sable et terre cuite. Elle doit evoquer une maison accueillante
- * (bayt), pas un tableau de bord. Le contraste vise WCAG 2.2 AA sur tous les
- * couples texte / fond, en clair comme en sombre.
+ * Ludique, "chunky", colore : gros boutons a liseré 3D, coins bien arrondis,
+ * typographie ronde et grasse (Nunito). Palette Duolingo officielle. Chaque
+ * couleur a sa version "ombre" (plus foncee), utilisee pour l'effet de relief
+ * des boutons pressables.
+ *
+ * Contraste WCAG 2.2 AA vise sur les couples texte / fond, clair et sombre.
  */
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-background: #fbf7f2;
+  /* Palette Duolingo — couleur pleine + ombre (liseré bas des boutons). */
+  --color-feather-green: #58cc02;
+  --color-feather-green-shadow: #58a700;
+  --color-cardinal: #ff4b4b;
+  --color-cardinal-shadow: #ea2b2b;
+  --color-macaw: #1cb0f6;
+  --color-macaw-shadow: #1899d6;
+  --color-bee: #ffc800;
+  --color-bee-shadow: #e6a800;
+
+  /* Neutres. */
+  --color-background: #ffffff;
   --color-surface: #ffffff;
-  --color-surface-hover: #f4eee6;
-  --color-foreground: #1c1917;
-  --color-muted-foreground: #635a50;
-  --color-border: #e9e0d5;
+  --color-surface-hover: #f7f7f7;
+  --color-foreground: #4b4b4b;
+  --color-muted-foreground: #777777;
+  --color-border: #e5e5e5;
+  --color-border-strong: #d4d4d4;
 
-  --color-primary: #b4552f;
-  --color-primary-hover: #9c4726;
+  /* Accent produit = vert Duolingo. */
+  --color-primary: #58cc02;
+  --color-primary-hover: #61e002;
+  --color-primary-shadow: #58a700;
   --color-primary-foreground: #ffffff;
-  --color-ring: #b4552f;
+  --color-ring: #1cb0f6;
 
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  /* Typographie ronde et grasse. */
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Coins genereux, signature "chunky". */
+  --radius-card: 1.25rem;
+  --radius-button: 1rem;
 }
 
 .dark {
-  --color-background: #14100d;
-  --color-surface: #1e1815;
-  --color-surface-hover: #2a221d;
-  --color-foreground: #f6f1ea;
-  --color-muted-foreground: #b5a99c;
-  --color-border: #322a24;
+  --color-background: #131f24;
+  --color-surface: #1b2b32;
+  --color-surface-hover: #22363e;
+  --color-foreground: #f1f7f9;
+  --color-muted-foreground: #9bb0b8;
+  --color-border: #37464f;
+  --color-border-strong: #4a5c66;
 
-  --color-primary: #e07a4e;
-  --color-primary-hover: #ef8a5d;
-  --color-primary-foreground: #1a120c;
-  --color-ring: #e07a4e;
-}
-
-/*
- * Couleurs des 4 notes.
- *
- * Chaque note a un fond teinte et une encre dediee : la couleur n'est jamais
- * le seul indice (le libelle et le raccourci clavier restent lisibles sans
- * perception des couleurs — WCAG 1.4.1).
- */
-:root {
-  --grade-again-soft: #fdeceb;
-  --grade-again-ink: #a1382c;
-  --grade-again-line: #f6d3d0;
-
-  --grade-hard-soft: #fbf0dd;
-  --grade-hard-ink: #8a5a12;
-  --grade-hard-line: #f0dcbb;
-
-  --grade-good-soft: #e6f4ee;
-  --grade-good-ink: #1f6b4f;
-  --grade-good-line: #c7e6d8;
-
-  --grade-easy-soft: #e9f0fd;
-  --grade-easy-ink: #2a5599;
-  --grade-easy-line: #cfdefa;
-}
-
-.dark {
-  --grade-again-soft: #35201d;
-  --grade-again-ink: #f5b5ad;
-  --grade-again-line: #4d2c27;
-
-  --grade-hard-soft: #332715;
-  --grade-hard-ink: #efc987;
-  --grade-hard-line: #4a381d;
-
-  --grade-good-soft: #172e26;
-  --grade-good-ink: #8fd8ba;
-  --grade-good-line: #23443a;
-
-  --grade-easy-soft: #1a2438;
-  --grade-easy-ink: #a9c6f5;
-  --grade-easy-line: #27354f;
+  --color-primary: #58cc02;
+  --color-primary-hover: #61e002;
+  --color-primary-shadow: #4a9e02;
+  --color-primary-foreground: #131f24;
+  --color-ring: #1cb0f6;
 }
 
 @layer base {
@@ -97,12 +77,20 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    font-weight: 600;
     -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-weight: 800;
+    letter-spacing: -0.01em;
   }
 
   /* Anneau de focus homogene et toujours visible (WCAG 2.2 — 2.4.11). */
   :focus-visible {
-    outline: 2px solid var(--color-ring);
+    outline: 3px solid var(--color-ring);
     outline-offset: 2px;
   }
 
@@ -117,60 +105,42 @@
 }
 
 @layer components {
-  /* Bouton de notation : fond teinte, encre dediee, cible tactile confortable. */
-  .grade-button {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.125rem;
-    min-height: 4.5rem;
-    padding: 0.75rem 0.5rem;
-    border-radius: 1rem;
-    border: 1px solid var(--grade-line);
-    background-color: var(--grade-soft);
-    color: var(--grade-ink);
-    font-weight: 600;
+  /*
+   * Bouton pressable — la signature Duolingo.
+   *
+   * Couleur pleine + liseré bas plus foncé (relief via box-shadow), qui
+   * s'enfonce au clic : le bouton descend de la hauteur du liseré, l'ombre
+   * disparait. `--btn-bg` / `--btn-shadow` / `--btn-fg` sont poses par les
+   * variantes de couleur (cf. button.tsx).
+   */
+  .pressable {
+    position: relative;
+    background-color: var(--btn-bg);
+    color: var(--btn-fg);
+    box-shadow: 0 4px 0 var(--btn-shadow);
     transition:
-      transform 180ms ease-out,
-      filter 180ms ease-out;
+      transform 80ms ease-out,
+      box-shadow 80ms ease-out,
+      filter 150ms ease-out;
   }
 
-  .grade-button:hover:not(:disabled) {
-    filter: brightness(0.97);
-    transform: translateY(-2px);
+  .pressable:hover:not(:disabled) {
+    filter: brightness(1.06);
   }
 
-  .grade-button:active:not(:disabled) {
-    transform: translateY(0) scale(0.98);
+  .pressable:active:not(:disabled) {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 var(--btn-shadow);
   }
 
-  .grade-button:disabled {
-    opacity: 0.55;
+  .pressable:disabled {
+    opacity: 0.5;
   }
 
-  .grade-again {
-    --grade-soft: var(--grade-again-soft);
-    --grade-ink: var(--grade-again-ink);
-    --grade-line: var(--grade-again-line);
-  }
-
-  .grade-hard {
-    --grade-soft: var(--grade-hard-soft);
-    --grade-ink: var(--grade-hard-ink);
-    --grade-line: var(--grade-hard-line);
-  }
-
-  .grade-good {
-    --grade-soft: var(--grade-good-soft);
-    --grade-ink: var(--grade-good-ink);
-    --grade-line: var(--grade-good-line);
-  }
-
-  .grade-easy {
-    --grade-soft: var(--grade-easy-soft);
-    --grade-ink: var(--grade-easy-ink);
-    --grade-line: var(--grade-easy-line);
+  @media (prefers-reduced-motion: reduce) {
+    .pressable:active:not(:disabled) {
+      transform: none;
+    }
   }
 
   /* Faces de la carte retournable. */
@@ -182,4 +152,21 @@
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
   }
+}
+
+/* Flash de feedback colore au moment de la note. */
+@keyframes bayt-flash {
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.bayt-flash {
+  animation: bayt-flash 0.6s ease-out forwards;
 }

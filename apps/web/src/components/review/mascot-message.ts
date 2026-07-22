@@ -5,8 +5,8 @@ import type { ReviewGrade } from '@/lib/api/types';
 /**
  * Ce que dit la mascotte, selon le moment de la session.
  *
- * Le ton est celui d'un mentor : on commente ce que la memoire est en train de
- * faire, on ne felicite jamais d'avoir clique. Aucun diminutif, aucune
+ * Le ton est celui d'un mentor : on commente ce que la mémoire est en train de
+ * faire, on ne félicite jamais d'avoir cliqué. Aucun diminutif, aucune
  * exclamation gratuite — bienveillant, jamais infantilisant.
  */
 export function mascotMessage(
@@ -18,22 +18,22 @@ export function mascotMessage(
   switch (mood) {
     case 'happy':
       return grade === 'Easy'
-        ? 'Solide. Cette carte reviendra bien plus tard, ta memoire tient.'
-        : 'Bien rappele. On espace l\'intervalle en consequence.';
+        ? 'Solide. Cette carte reviendra bien plus tard, ta mémoire tient.'
+        : 'Bien rappelé. On espace l\'intervalle en conséquence.';
 
     case 'encouraging':
       return grade === 'Again'
-        ? 'Oublier fait partie du processus. On la revoit tres vite, c\'est la que ca s\'ancre.'
+        ? 'Oublier fait partie du processus. On la revoit très vite, c\'est là que ça s\'ancre.'
         : 'Rappel laborieux, donc utile. On resserre un peu l\'intervalle.';
 
     case 'celebrating':
-      return 'Ta file est vide. La memoire travaille maintenant en arriere-plan.';
+      return 'Ta file est vide. La mémoire travaille maintenant en arrière-plan.';
 
     case 'idle':
     default:
       return revealed
-        ? 'Compare ta reponse a la solution, puis note honnetement ton rappel.'
-        : 'Prends le temps de retrouver la reponse avant de la reveler.';
+        ? 'Compare ta réponse à la solution, puis note honnêtement ton rappel.'
+        : 'Prends le temps de retrouver la réponse avant de la révéler.';
   }
 }
 

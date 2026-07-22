@@ -16,5 +16,6 @@ export {
   type MascotProps,
   type MascotSize,
 } from './components/mascot.js';
+export { ProgressBar, type ProgressBarProps } from './components/progress-bar.js';
 export { Surface } from './components/surface.js';
 export { cn } from './lib/cn.js';

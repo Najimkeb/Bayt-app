@@ -1,6 +1,5 @@
 'use client';
 
-import { Button } from '@bayt/ui';
 import { useEffect, useState, type ReactElement } from 'react';
 
 type Theme = 'light' | 'dark';
@@ -32,13 +31,14 @@ export function ThemeToggle(): ReactElement {
   const isDark = theme === 'dark';
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
+    // Bouton d'icône du header : discret, pas un CTA pressable coloré.
+    <button
+      type="button"
       onClick={toggle}
       aria-pressed={isDark}
       aria-label={isDark ? 'Passer en mode clair' : 'Passer en mode sombre'}
       title={isDark ? 'Mode clair' : 'Mode sombre'}
+      className="inline-flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5" fill="none" strokeWidth="1.8">
         {isDark ? (
@@ -65,7 +65,7 @@ export function ThemeToggle(): ReactElement {
           />
         )}
       </svg>
-    </Button>
+    </button>
   );
 }
 

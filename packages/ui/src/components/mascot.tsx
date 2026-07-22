@@ -36,11 +36,11 @@ export const MASCOT_POSES: { readonly idle: MascotPose } & Partial<
 > = {
   idle: {
     src: '/mascot/idle.png',
-    alt: 'La mascotte BAYT, un renard en tenue brodee, bras croises et sourire calme',
+    alt: 'La mascotte BAYT, un renard en tenue brodée, bras croisés et sourire calme',
   },
   celebrating: {
     src: '/mascot/celebrating.png',
-    alt: 'La mascotte BAYT, un renard en tenue brodee, bras leves et joyeux',
+    alt: 'La mascotte BAYT, un renard en tenue brodée, bras levés et joyeux',
   },
 };
 

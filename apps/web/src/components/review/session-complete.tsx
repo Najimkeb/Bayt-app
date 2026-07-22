@@ -27,19 +27,19 @@ export function SessionComplete({ onRefresh }: { onRefresh: () => void }): React
       <Mascot mood="celebrating" size="lg" priority />
 
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Tout est revise !</h1>
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <h1 className="text-3xl font-extrabold tracking-tight">Tout est révisé !</h1>
+        <p className="text-base font-bold leading-relaxed text-muted-foreground">
           {mascotMessage('celebrating')}
         </p>
       </div>
 
-      <p className="rounded-2xl border border-border bg-surface px-5 py-4 text-sm leading-relaxed text-muted-foreground">
-        Reviens quand les prochaines cartes arriveront a echeance : reviser trop tot n&apos;apporte
+      <p className="rounded-[var(--radius-card)] border-2 border-border bg-surface px-5 py-4 text-base font-bold leading-relaxed text-muted-foreground">
+        Reviens quand les prochaines cartes arriveront à échéance : réviser trop tôt n&apos;apporte
         presque rien, c&apos;est l&apos;effort de rappel au bon moment qui consolide.
       </p>
 
-      <Button variant="secondary" onClick={onRefresh}>
-        Verifier a nouveau
+      <Button variant="gray" onClick={onRefresh}>
+        Vérifier à nouveau
       </Button>
     </motion.div>
   );
