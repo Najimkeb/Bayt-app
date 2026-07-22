@@ -1,0 +1,18 @@
+{
+  "name": "@bayt/config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Configurations partagees (TypeScript, lint, tokens de design)",
+  "files": [
+    "tsconfig.base.json",
+    "tsconfig.react.json"
+  ],
+  "exports": {
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./tsconfig.react.json": "./tsconfig.react.json"
+  },
+  "scripts": {
+    "build": "echo \"@bayt/config: fichiers statiques, rien a compiler\"",
+    "typecheck": "echo \"@bayt/config: aucun source TypeScript\""
+  }
+}

@@ -10,6 +10,17 @@ Plateforme d'apprentissage assistée par IA — transforme l'utilisateur en expe
 | Frontend | Next.js, React, TypeScript, TailwindCSS, shadcn/ui, Framer Motion |
 | Backend | Hono, REST propre, architecture modulaire |
 
+## Démarrage
+
+```bash
+corepack enable          # active pnpm (version épinglée dans package.json)
+pnpm install
+pnpm typecheck           # compile packages/* puis vérifie tout le workspace
+pnpm test                # vitest (packages/domain)
+```
+
+Node ≥ 20 requis. Le gestionnaire de paquets est **pnpm** (workspaces), épinglé via `packageManager`.
+
 ## Structure (cible)
 
 ```
@@ -34,4 +45,4 @@ lessons.md        # Mémoire cumulative des sessions
 
 ## Statut
 
-🚧 Fondations posées. Prochaine étape : monorepo pnpm + moteur FSRS pur dans `packages/domain` (avec tests) avant toute UI.
+🚧 Monorepo pnpm en place (squelettes valides, aucune logique métier). Prochaine étape : moteur FSRS pur dans `packages/domain` (avec tests), puis intégration Next.js / Hono / Cloudflare.
