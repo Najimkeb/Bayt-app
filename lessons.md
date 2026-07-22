@@ -42,5 +42,14 @@ Le cache de la file **est** la session de révision : une note retire la carte d
 **L013 — Carte retournable : la face cachée doit sortir de l'arbre d'accessibilité.**
 Les deux faces coexistent dans le DOM pour le flip 3D. Sans `aria-hidden` + `inert` sur la face cachée, un lecteur d'écran annonce la réponse **avant** que l'apprenant ne la révèle — la promesse d'active recall est cassée pour ces utilisateurs. Détecté par un test composant, pas à l'œil.
 
+**L014 — Mascotte en images, avec repli automatique sur `idle`.**
+Les poses vivent dans `apps/web/public/mascot/<mood>.png` et sont déclarées dans le mapping `MASCOT_POSES` de `packages/ui` — **volontairement incomplet** : `resolvePose(mood)` retombe sur `idle` pour toute humeur sans illustration (`idle` est obligatoire par typage). Conséquence : le code produit peut déjà demander `happy` / `encouraging` avant que les dessins existent, sans condition ni garde. Ajouter une pose = déposer le PNG + une ligne dans le mapping, rien d'autre. Les images source haute résolution restent hors du repo (`~/Downloads/Bayt/mascotte-sources/`), seules les versions 512 px sont versionnées.
+
+**L015 — `packages/ui` est une bibliothèque pour bundler, pas pour Node.**
+Depuis l'usage de `next/image`, elle compile en `moduleResolution: Bundler` (Next n'expose pas `next/image` sous NodeNext) et déclare `next` / `react` / `framer-motion` en **peerDependencies** pour éviter les instances dupliquées. `tsc` préserve bien la directive `'use client'` en tête de fichier — vérifié dans `dist/`.
+
+**L016 — Ne jamais lancer `wrangler d1 execute --local` pendant que `wrangler dev` tourne.**
+Les deux processus ouvrent le même fichier SQLite : le Worker meurt au rechargement sur `SQLITE_BUSY`. Arrêter `pnpm dev` avant tout `db:reset` / `db:seed:local`.
+
 **L005 — Convention de cette mémoire.**
 Une leçon = une entrée courte et actionnable. Noter le nouveau et le confirmé, pas le déjà-écrit. Mettre à jour une leçon plutôt que la dupliquer.

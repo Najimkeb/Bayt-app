@@ -7,5 +7,14 @@
  */
 
 export { Button, buttonVariants, type ButtonProps } from './components/button.js';
+export {
+  MASCOT_POSES,
+  Mascot,
+  resolvePose,
+  type MascotMood,
+  type MascotPose,
+  type MascotProps,
+  type MascotSize,
+} from './components/mascot.js';
 export { Surface } from './components/surface.js';
 export { cn } from './lib/cn.js';

@@ -1,6 +1,11 @@
 {
   "extends": "@bayt/config/tsconfig.react.json",
   "compilerOptions": {
+    /* Cette bibliotheque est consommee par un bundler (Next.js), pas par Node :
+       on adopte sa resolution. Necessaire notamment pour `next/image`, que
+       Next n'expose pas sous la resolution NodeNext. */
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "rootDir": "./src",
     "outDir": "./dist"
   },

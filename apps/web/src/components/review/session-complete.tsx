@@ -1,10 +1,10 @@
 'use client';
 
-import { Button } from '@bayt/ui';
+import { Button, Mascot } from '@bayt/ui';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { ReactElement } from 'react';
 
-import { Mascot, mascotMessage } from '@/components/mascot';
+import { mascotMessage } from './mascot-message';
 
 /**
  * Fin de session : le moment le plus important de la boucle.
@@ -23,7 +23,8 @@ export function SessionComplete({ onRefresh }: { onRefresh: () => void }): React
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
     >
-      <Mascot mood="celebrating" className="size-28" />
+      {/* Moment fort de la session : la mascotte prend toute la place. */}
+      <Mascot mood="celebrating" size="lg" priority />
 
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Tout est revise !</h1>

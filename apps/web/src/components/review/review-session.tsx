@@ -1,10 +1,9 @@
 'use client';
 
-import { Button } from '@bayt/ui';
+import { Button, Mascot, type MascotMood } from '@bayt/ui';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 
-import { Mascot, mascotMessage, type MascotMood } from '@/components/mascot';
 import { DEMO_USER_ID } from '@/lib/api/client';
 import { useDueQueue, usePreview, useSubmitReview } from '@/lib/api/queries';
 import type { ReviewGrade } from '@/lib/api/types';
@@ -12,13 +11,11 @@ import { formatInterval } from '@/lib/format-interval';
 
 import { Flashcard } from './flashcard';
 import { GradeButtons } from './grade-buttons';
+import { mascotMessage, moodForGrade } from './mascot-message';
 import { SessionComplete } from './session-complete';
 
 /** Notes accessibles au clavier, dans l'ordre des touches 1 a 4. */
 const SHORTCUT_GRADES: readonly ReviewGrade[] = ['Again', 'Hard', 'Good', 'Easy'];
-
-/** Notes qui traduisent un rappel reussi. */
-const POSITIVE_GRADES: readonly ReviewGrade[] = ['Good', 'Easy'];
 
 /**
  * La boucle de revision : une carte, une reponse, une note, la suivante.
@@ -35,6 +32,8 @@ export function ReviewSession(): ReactElement {
 
   const [revealed, setRevealed] = useState(false);
   const [lastGrade, setLastGrade] = useState<ReviewGrade | null>(null);
+  /** Humeur declenchee par la derniere note, remise a zero a la carte suivante. */
+  const [reaction, setReaction] = useState<MascotMood | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const card = queue.data?.cards[0] ?? null;
@@ -45,6 +44,7 @@ export function ReviewSession(): ReactElement {
   // Chaque nouvelle carte repart cachee.
   useEffect(() => {
     setRevealed(false);
+    setReaction(null);
   }, [itemId]);
 
   const reveal = useCallback(() => {
@@ -58,6 +58,7 @@ export function ReviewSession(): ReactElement {
       }
 
       setLastGrade(value);
+      setReaction(moodForGrade(value));
 
       submit.mutate(
         { itemId, grade: value },
@@ -106,17 +107,20 @@ export function ReviewSession(): ReactElement {
     };
   }, [card, revealed, reveal, grade]);
 
+  /**
+   * Humeur de la mascotte.
+   *
+   * Elle reagit a la note qui vient d'etre donnee, puis revient au calme avec
+   * la carte suivante. `happy` et `encouraging` n'ont pas encore d'illustration
+   * dediee : le composant retombe sur `idle` sans que ce code ne le sache.
+   */
   const mood = useMemo<MascotMood>(() => {
     if (queue.data !== undefined && card === null) {
       return 'celebrating';
     }
 
-    if (submit.isPending && lastGrade !== null) {
-      return POSITIVE_GRADES.includes(lastGrade) ? 'encouraging' : 'reassuring';
-    }
-
-    return revealed ? 'thinking' : 'idle';
-  }, [queue.data, card, submit.isPending, lastGrade, revealed]);
+    return reaction ?? 'idle';
+  }, [queue.data, card, reaction]);
 
   if (queue.isPending) {
     return <SessionSkeleton />;
@@ -169,7 +173,7 @@ export function ReviewSession(): ReactElement {
         )}
       </div>
 
-      <MascotPanel mood={mood} grade={lastGrade} />
+      <MascotPanel mood={mood} grade={lastGrade} revealed={revealed} />
 
       {/* Annonces pour les lecteurs d'ecran, sans perturber l'affichage. */}
       <p aria-live="polite" className="sr-only">
@@ -191,13 +195,21 @@ function ProgressHeader({ remaining }: { remaining: number }): ReactElement {
   );
 }
 
-/** La mascotte et son message, cote a cote. */
-function MascotPanel({ mood, grade }: { mood: MascotMood; grade: ReviewGrade | null }): ReactElement {
+/** La mascotte et son message, cote a cote — la zone d'indice de l'ecran. */
+function MascotPanel({
+  mood,
+  grade,
+  revealed,
+}: {
+  mood: MascotMood;
+  grade: ReviewGrade | null;
+  revealed: boolean;
+}): ReactElement {
   return (
     <div className="flex items-center gap-4 rounded-2xl border border-border bg-surface/60 p-4">
-      <Mascot mood={mood} className="size-14 shrink-0" />
+      <Mascot mood={mood} size="md" priority />
       <p className="text-sm leading-relaxed text-muted-foreground">
-        {mascotMessage(mood, grade ?? undefined)}
+        {mascotMessage(mood, { revealed, grade })}
       </p>
     </div>
   );
@@ -219,7 +231,7 @@ function SessionSkeleton(): ReactElement {
 function ConnectionError({ onRetry }: { onRetry: () => void }): ReactElement {
   return (
     <div className="flex w-full max-w-md flex-col items-center gap-4 text-center" role="alert">
-      <Mascot mood="reassuring" className="size-20" />
+      <Mascot mood="encouraging" size="md" />
       <h1 className="text-xl font-semibold">L&apos;API BAYT est injoignable</h1>
       <p className="text-sm leading-relaxed text-muted-foreground">
         Le Worker local ne repond pas. Lance-le avec <code className="font-semibold">pnpm dev</code>{' '}
