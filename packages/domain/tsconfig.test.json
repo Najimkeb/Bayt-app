@@ -3,7 +3,8 @@
   "compilerOptions": {
     "rootDir": ".",
     "noEmit": true,
-    "types": ["vitest/globals"]
+    /* `node` n'est disponible que pour les tests : `src/` reste pur. */
+    "types": ["vitest/globals", "node"]
   },
   "include": ["src/**/*.ts", "test/**/*.ts"]
 }
