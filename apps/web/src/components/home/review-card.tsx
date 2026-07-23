@@ -4,8 +4,8 @@ import { Surface, buttonVariants } from '@bayt/ui';
 import Link from 'next/link';
 import type { ReactElement } from 'react';
 
-import { DEMO_USER_ID } from '@/lib/api/client';
 import { useDueQueue } from '@/lib/api/queries';
+import { useUserId } from '@/lib/auth/use-user-id';
 
 /**
  * Carte « Réviser » mise en évidence en haut de l'accueil.
@@ -14,7 +14,7 @@ import { useDueQueue } from '@/lib/api/queries';
  * Sans carte due : un état calme, sans bouton criard.
  */
 export function ReviewCard(): ReactElement {
-  const queue = useDueQueue(DEMO_USER_ID);
+  const queue = useDueQueue(useUserId());
   const count = queue.data?.cards.length ?? 0;
 
   if (queue.isSuccess && count === 0) {

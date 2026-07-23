@@ -5,6 +5,11 @@ import { EXERCISE_TYPES, LEARNING_STATES, REVIEW_GRADES } from '@bayt/domain';
 import { DOCUMENT_FORMATS } from '../../ingestion/format.js';
 import { DOCUMENT_STATUSES } from '../../ingestion/document.js';
 
+// Tables d'authentification (Better Auth) — fusionnées ici pour que drizzle-kit
+// les intègre à la même base et aux migrations. Le domaine ne les référence
+// jamais ; seul le contexte « Identity & Access » les manipule.
+export { account, session, user, verification } from './auth-schema.js';
+
 /**
  * Schema D1 du contexte « Learning Engine ».
  *

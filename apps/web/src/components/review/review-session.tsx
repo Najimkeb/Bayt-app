@@ -4,9 +4,9 @@ import { Button, Mascot, ProgressBar, type MascotMood } from '@bayt/ui';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 
-import { DEMO_USER_ID } from '@/lib/api/client';
 import { useIncrementProgress } from '@/lib/api/progress-queries';
 import { useDueQueue, usePreview, useSubmitReview } from '@/lib/api/queries';
+import { useUserId } from '@/lib/auth/use-user-id';
 import type { ReviewGrade } from '@/lib/api/types';
 import { formatInterval } from '@/lib/format-interval';
 import type { XpRewardData } from '@/components/progress/xp-reward';
@@ -35,7 +35,7 @@ interface Flash {
  * projette (`preview`) et enregistre ce que l'apprenant répond (`POST /reviews`).
  */
 export function ReviewSession(): ReactElement {
-  const userId = DEMO_USER_ID;
+  const userId = useUserId();
   const reduceMotion = useReducedMotion();
 
   const queue = useDueQueue(userId);

@@ -25,7 +25,7 @@ const POLL_INTERVAL_MS = 2_000;
 export function useDocuments(userId: string) {
   return useQuery<DocumentList>({
     queryKey: documentKeys.list(userId),
-    queryFn: () => fetchDocuments(userId),
+    queryFn: () => fetchDocuments(),
     staleTime: 1_000,
     // Sonde léger, coupé automatiquement dès que rien n'est plus en traitement.
     refetchInterval: (query) => {
@@ -40,7 +40,7 @@ export function useUploadDocument(userId: string) {
   const queryClient = useQueryClient();
 
   return useMutation<DocumentDto, Error, File>({
-    mutationFn: (file) => uploadDocument(userId, file),
+    mutationFn: (file) => uploadDocument(file),
 
     onSuccess: (created) => {
       const key = documentKeys.list(userId);

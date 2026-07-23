@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { Nunito } from 'next/font/google';
 import type { ReactElement, ReactNode } from 'react';
 
+import { AuthGate } from '@/components/auth/auth-gate';
+import { LogoutButton } from '@/components/auth/logout-button';
 import { ProgressHeader } from '@/components/progress/progress-header';
 import { ThemeToggle, themeInitScript } from '@/components/theme-toggle';
 
@@ -61,6 +63,7 @@ export default function RootLayout({ children }: { children: ReactNode }): React
               </span>
               <div className="flex items-center gap-2 sm:gap-4">
                 <ProgressHeader />
+                <LogoutButton />
                 <ThemeToggle />
               </div>
             </header>
@@ -69,7 +72,7 @@ export default function RootLayout({ children }: { children: ReactNode }): React
               id="contenu"
               className="flex flex-1 flex-col items-center justify-center px-4 pb-12 pt-2 sm:px-8 sm:pb-16"
             >
-              {children}
+              <AuthGate>{children}</AuthGate>
             </main>
           </div>
         </Providers>

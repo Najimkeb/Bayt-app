@@ -2,8 +2,8 @@
 
 import type { ReactElement } from 'react';
 
-import { DEMO_USER_ID } from '@/lib/api/client';
 import { useProgress } from '@/lib/api/progress-queries';
+import { useUserId } from '@/lib/auth/use-user-id';
 
 import { GoalRing } from './goal-ring';
 
@@ -15,7 +15,7 @@ import { GoalRing } from './goal-ring';
  * que de casser l'en-tête.
  */
 export function ProgressHeader(): ReactElement | null {
-  const progress = useProgress(DEMO_USER_ID);
+  const progress = useProgress(useUserId());
 
   if (progress.data === undefined) {
     return null;

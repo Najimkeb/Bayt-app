@@ -14,10 +14,14 @@ export class DeleteDocument {
     private readonly storage: ObjectStorage,
   ) {}
 
-  /** Renvoie `false` si le document est introuvable (rien à supprimer). */
-  public async execute(id: string): Promise<boolean> {
+  /**
+   * Renvoie `false` si le document est introuvable **ou** n'appartient pas à
+   * l'apprenant : dans les deux cas rien n'est supprimé et l'appelant répond
+   * 404 (on ne révèle pas l'existence du document d'un autre).
+   */
+  public async execute(id: string, userId: string): Promise<boolean> {
     const document = await this.documents.findById(id);
-    if (document === null) {
+    if (document === null || document.userId !== userId) {
       return false;
     }
 

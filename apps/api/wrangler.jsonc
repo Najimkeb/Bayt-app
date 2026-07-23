@@ -4,6 +4,9 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-07-01",
 
+  // Requis par Better Auth (crypto/hachage de mots de passe côté Node).
+  "compatibility_flags": ["nodejs_compat"],
+
   // Base D1 du contexte « Learning Engine ».
   // `database_id` n'est utilise qu'en remote : en local, wrangler cree une base
   // SQLite sous .wrangler/state/ — aucun compte Cloudflare requis.

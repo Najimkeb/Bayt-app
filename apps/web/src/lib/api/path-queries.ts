@@ -11,7 +11,7 @@ export const pathKey = (userId: string): readonly string[] => ['path', userId];
 export function usePath(userId: string) {
   return useQuery<LearningPath>({
     queryKey: pathKey(userId),
-    queryFn: () => fetchPath(userId),
+    queryFn: () => fetchPath(),
     staleTime: 10_000,
   });
 }
@@ -25,7 +25,7 @@ export function useCompleteLesson(userId: string) {
   const queryClient = useQueryClient();
 
   return useMutation<LearningPath, Error, string>({
-    mutationFn: (lessonId) => markLessonComplete(userId, lessonId),
+    mutationFn: (lessonId) => markLessonComplete(lessonId),
     onSuccess: (path) => {
       queryClient.setQueryData<LearningPath>(pathKey(userId), path);
     },

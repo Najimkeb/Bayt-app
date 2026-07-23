@@ -4,9 +4,9 @@ import { Mascot } from '@bayt/ui';
 import Link from 'next/link';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 
-import { DEMO_USER_ID } from '@/lib/api/client';
 import type { DocumentDto } from '@/lib/api/document-types';
 import { useDeleteDocument, useDocuments, useUploadDocument } from '@/lib/api/document-queries';
+import { useUserId } from '@/lib/auth/use-user-id';
 
 import { CardPreviewLayer } from './card-preview';
 import { DocumentRow } from './document-row';
@@ -21,9 +21,10 @@ import { Dropzone } from './dropzone';
  * document prêt s'ouvre pour prévisualiser ses cartes et lancer une révision.
  */
 export function LibraryScreen(): ReactElement {
-  const documents = useDocuments(DEMO_USER_ID);
-  const upload = useUploadDocument(DEMO_USER_ID);
-  const remove = useDeleteDocument(DEMO_USER_ID);
+  const userId = useUserId();
+  const documents = useDocuments(userId);
+  const upload = useUploadDocument(userId);
+  const remove = useDeleteDocument(userId);
 
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<DocumentDto | null>(null);

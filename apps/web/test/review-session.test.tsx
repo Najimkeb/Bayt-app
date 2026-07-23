@@ -27,6 +27,8 @@ vi.mock('@/lib/api/client', () => ({
     Promise.resolve({ xpGained: 8, goalJustReached: false, streakIncreased: false, status: { xpToday: 8, dailyGoal: 50, goalMet: false, ratio: 0.16, streak: 0, longestStreak: 0, xpTotal: 8 } }),
 }));
 
+vi.mock('@/lib/auth/use-user-id', () => ({ useUserId: () => 'demo' }));
+
 const { ReviewSession } = await import('@/components/review/review-session');
 
 const MINUTE = 60_000;

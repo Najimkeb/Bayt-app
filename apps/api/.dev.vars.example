@@ -1,0 +1,9 @@
+# Modèle des secrets de développement local.
+# Copier en `.dev.vars` (git-ignoré) et remplir. Ne jamais committer `.dev.vars`.
+#
+#   cp .dev.vars.example .dev.vars
+#   # puis générer un secret :
+#   node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+#
+# En production, le secret se pose avec :  wrangler secret put BETTER_AUTH_SECRET
+BETTER_AUTH_SECRET=remplace-moi-par-32-octets-aleatoires

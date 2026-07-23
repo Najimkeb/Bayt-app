@@ -5,6 +5,7 @@ import type { LearningItemView } from '../../src/application/ports/review-reposi
 import { createApp } from '../../src/http/app.js';
 import { InMemoryLessonRepository } from '../../src/infrastructure/repositories/in-memory-lesson.repository.js';
 import { InMemoryReviewRepository } from '../../src/infrastructure/repositories/in-memory-review.repository.js';
+import { alwaysUser } from '../support/session.js';
 
 const ITEMS: readonly LearningItemView[] = [
   { id: 'i-mcq', type: 'flashcard', front: 'q', back: 'D1' },
@@ -43,6 +44,7 @@ beforeEach(() => {
     repository: new InMemoryReviewRepository(ITEMS),
     lessonRepository: new InMemoryLessonRepository([LESSON]),
     scheduler: new Scheduler(),
+    sessionVerifier: alwaysUser('demo'),
     clock: () => new Date('2026-03-01T09:00:00.000Z'),
   });
 });
@@ -130,9 +132,6 @@ describe('POST /lessons/:id/answers', () => {
 
   it('valide le corps (zod) : 400 si malformé', async () => {
     expect((await answer({ userId: 'demo', exerciseId: 'x-mcq' })).status).toBe(400);
-    expect((await answer({ exerciseId: 'x-mcq', answer: { kind: 'mcq', choice: 1 } })).status).toBe(
-      400,
-    );
   });
 
   it('404 sur un exercice inconnu', async () => {
@@ -151,6 +150,7 @@ describe('sans lessonRepository', () => {
     const bare = createApp({
       repository: new InMemoryReviewRepository(ITEMS),
       scheduler: new Scheduler(),
+      sessionVerifier: alwaysUser('demo'),
     });
 
     expect((await bare.request('/lessons/l1')).status).toBe(404);

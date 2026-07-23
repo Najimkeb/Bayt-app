@@ -5,6 +5,7 @@ import type { PathUnitRow } from '../../src/application/ports/path-repository.js
 import { assignNodeStates } from '../../src/application/use-cases/get-path.js';
 import { createApp } from '../../src/http/app.js';
 import { InMemoryPathRepository } from '../../src/infrastructure/repositories/in-memory-path.repository.js';
+import { alwaysUser } from '../support/session.js';
 import { InMemoryReviewRepository } from '../../src/infrastructure/repositories/in-memory-review.repository.js';
 
 const UNITS: readonly PathUnitRow[] = [
@@ -44,6 +45,7 @@ beforeEach(() => {
     repository: new InMemoryReviewRepository(),
     pathRepository: new InMemoryPathRepository(UNITS),
     scheduler: new Scheduler(),
+    sessionVerifier: alwaysUser('demo'),
     clock: () => new Date('2026-03-01T12:00:00Z'),
   });
 });
@@ -63,9 +65,6 @@ describe('GET /path', () => {
     ]);
   });
 
-  it('exige un userId', async () => {
-    expect((await app.request('/path')).status).toBe(400);
-  });
 });
 
 describe('POST /lessons/:id/complete', () => {
@@ -105,9 +104,6 @@ describe('POST /lessons/:id/complete', () => {
     ]);
   });
 
-  it('valide le corps (zod)', async () => {
-    expect((await complete('l1', {})).status).toBe(400);
-  });
 });
 
 describe('sans pathRepository', () => {
@@ -115,8 +111,9 @@ describe('sans pathRepository', () => {
     const bare = createApp({
       repository: new InMemoryReviewRepository(),
       scheduler: new Scheduler(),
+      sessionVerifier: alwaysUser('demo'),
     });
 
-    expect((await bare.request('/path?userId=demo')).status).toBe(404);
+    expect((await bare.request('/path')).status).toBe(404);
   });
 });

@@ -21,7 +21,10 @@ export function browserTimezone(): string {
 export function useProgress(userId: string) {
   return useQuery<DailyStatus>({
     queryKey: progressKey(userId),
-    queryFn: () => fetchProgress(userId, browserTimezone()),
+    queryFn: () => fetchProgress(browserTimezone()),
+    // La barre est visible partout, y compris hors session (login) : on ne
+    // sollicite l'API que lorsqu'un apprenant est connecté.
+    enabled: userId !== '',
     staleTime: 10_000,
   });
 }
@@ -36,7 +39,7 @@ export function useIncrementProgress(userId: string) {
   const queryClient = useQueryClient();
 
   return useMutation<IncrementResult, Error, XpEvent>({
-    mutationFn: (event) => incrementProgress({ userId, event, timezone: browserTimezone() }),
+    mutationFn: (event) => incrementProgress({ event, timezone: browserTimezone() }),
     onSuccess: (result) => {
       queryClient.setQueryData<DailyStatus>(progressKey(userId), result.status);
     },

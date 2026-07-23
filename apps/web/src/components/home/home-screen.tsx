@@ -4,10 +4,10 @@ import { Mascot, Surface } from '@bayt/ui';
 import Link from 'next/link';
 import type { ReactElement } from 'react';
 
-import { DEMO_USER_ID } from '@/lib/api/client';
 import { usePath } from '@/lib/api/path-queries';
 import { useProgress } from '@/lib/api/progress-queries';
 import { useDueQueue } from '@/lib/api/queries';
+import { useUserId } from '@/lib/auth/use-user-id';
 
 import { ReviewCard } from './review-card';
 import { UnitPath } from './unit-path';
@@ -19,9 +19,10 @@ import { UnitPath } from './unit-path';
  * mascotte et un message d'accueil contextuel.
  */
 export function HomeScreen(): ReactElement {
-  const path = usePath(DEMO_USER_ID);
-  const queue = useDueQueue(DEMO_USER_ID);
-  const progress = useProgress(DEMO_USER_ID);
+  const userId = useUserId();
+  const path = usePath(userId);
+  const queue = useDueQueue(userId);
+  const progress = useProgress(userId);
 
   const dueCount = queue.data?.cards.length ?? 0;
   const goalMet = progress.data?.goalMet ?? false;

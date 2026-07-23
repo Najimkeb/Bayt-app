@@ -4,8 +4,8 @@ import { Button, Mascot, ProgressBar, Surface, type MascotMood } from '@bayt/ui'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 
-import { DEMO_USER_ID } from '@/lib/api/client';
 import { useLesson, useSubmitAnswer } from '@/lib/api/lesson-queries';
+import { useUserId } from '@/lib/auth/use-user-id';
 import type { AnswerResult, ExerciseAnswer, PresentedExercise } from '@/lib/api/lesson-types';
 import { useCompleteLesson } from '@/lib/api/path-queries';
 import { useIncrementProgress } from '@/lib/api/progress-queries';
@@ -27,7 +27,7 @@ import { LessonComplete } from './lesson-complete';
  * domaine, via l'API.
  */
 export function LessonSession({ lessonId }: { lessonId: string }): ReactElement {
-  const userId = DEMO_USER_ID;
+  const userId = useUserId();
   const reduceMotion = useReducedMotion();
 
   const lesson = useLesson(lessonId);

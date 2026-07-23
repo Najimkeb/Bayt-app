@@ -3,7 +3,9 @@ import { drizzle, type DrizzleD1Database } from 'drizzle-orm/d1';
 
 import type { IngestionMessage } from './application/ports/ingestion-queue.js';
 import { IngestDocument } from './application/use-cases/ingest-document.js';
+import { createAuth } from './auth/auth.js';
 import { createApp } from './http/app.js';
+import { BetterAuthSessionVerifier } from './http/session.js';
 import { CardGenerator } from './ingestion/card-generator.js';
 import { HeuristicProvider } from './ingestion/llm/heuristic-provider.js';
 import { WorkersAiProvider, type WorkersAiBinding } from './ingestion/llm/workers-ai-provider.js';
@@ -27,6 +29,19 @@ export interface Env {
   readonly DOCS: R2Like;
   readonly INGESTION_QUEUE: QueueLike;
   readonly AI?: WorkersAiBinding;
+  /** Secret de signature Better Auth (`.dev.vars` en local, secret Worker en prod). */
+  readonly BETTER_AUTH_SECRET: string;
+  /** URL publique de l'API (base des routes `/api/auth`). Défaut : origine de la requête. */
+  readonly BETTER_AUTH_URL?: string;
+  /** Origine du front autorisée (session + CORS). Défaut : localhost:3000. */
+  readonly WEB_ORIGIN?: string;
+}
+
+/** Origines du front autorisées (session + CORS) — surchargées par `WEB_ORIGIN`. */
+function webOrigins(env: Env): string[] {
+  return env.WEB_ORIGIN !== undefined && env.WEB_ORIGIN !== ''
+    ? [env.WEB_ORIGIN]
+    : ['http://localhost:3000', 'http://127.0.0.1:3000'];
 }
 
 /**
@@ -69,7 +84,17 @@ function createIngestor(db: DrizzleD1Database, env: Env): IngestDocument {
  */
 export default {
   fetch(request: Request, env: Env, context: ExecutionContext): Response | Promise<Response> {
+    // UNE seule instance Drizzle par requête, partagée par les repositories ET
+    // par Better Auth (le binding D1 n'existe que dans ce contexte de requête).
     const db = drizzle(env.DB);
+
+    const origins = webOrigins(env);
+    const auth = createAuth(db, {
+      secret: env.BETTER_AUTH_SECRET,
+      baseURL: env.BETTER_AUTH_URL ?? new URL(request.url).origin,
+      trustedOrigins: origins,
+    });
+
     const app = createApp({
       repository: new D1ReviewRepository(db),
       lessonRepository: new D1LessonRepository(db),
@@ -79,6 +104,9 @@ export default {
       objectStorage: new R2ObjectStorage(env.DOCS),
       ingestionQueue: new CfIngestionQueue(env.INGESTION_QUEUE),
       scheduler: new Scheduler(),
+      sessionVerifier: new BetterAuthSessionVerifier(auth),
+      authHandler: (raw) => auth.handler(raw),
+      allowedOrigins: origins,
     });
 
     return app.fetch(request, env, context);

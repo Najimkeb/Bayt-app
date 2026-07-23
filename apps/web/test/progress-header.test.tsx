@@ -13,6 +13,8 @@ vi.mock('@/lib/api/client', () => ({
   fetchProgress: () => fetchProgress(),
 }));
 
+vi.mock('@/lib/auth/use-user-id', () => ({ useUserId: () => 'demo' }));
+
 const { ProgressHeader } = await import('@/components/progress/progress-header');
 
 function renderHeader(): void {

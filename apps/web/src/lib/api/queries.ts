@@ -22,7 +22,7 @@ export const queryKeys = {
 export function useDueQueue(userId: string) {
   return useQuery({
     queryKey: queryKeys.queue(userId),
-    queryFn: () => fetchDueQueue(userId),
+    queryFn: () => fetchDueQueue(),
     // Les echeances evoluent cote serveur : on ne garde pas la file trop longtemps.
     staleTime: 30_000,
   });
@@ -37,7 +37,7 @@ export function useDueQueue(userId: string) {
 export function usePreview(userId: string, itemId: string | null, enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.preview(userId, itemId ?? ''),
-    queryFn: () => fetchPreview(userId, itemId as string),
+    queryFn: () => fetchPreview(itemId as string),
     enabled: enabled && itemId !== null,
     staleTime: 60_000,
   });
@@ -52,7 +52,7 @@ export function useSubmitReview(userId: string) {
     { itemId: string; grade: ReviewGrade },
     { previous: DueQueue | undefined }
   >({
-    mutationFn: ({ itemId, grade }) => submitReview(userId, itemId, grade),
+    mutationFn: ({ itemId, grade }) => submitReview(itemId, grade),
 
     onMutate: async ({ itemId }) => {
       const key = queryKeys.queue(userId);

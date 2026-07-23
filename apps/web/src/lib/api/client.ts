@@ -9,18 +9,13 @@ import type { DueQueue, Preview, ReviewGrade, ReviewResult } from './types';
  *
  * Le front ne calcule jamais de planification : il lit et il ecrit, le domaine
  * decide (cf. lessons.md L003). Toute la logique FSRS reste derriere l'API.
+ *
+ * **L'`userId` ne circule plus** : le Worker le déduit du cookie de session.
+ * Toutes les requêtes envoient donc les cookies (`credentials: 'include'`).
  */
 
 /** URL du Worker — surchargeable via `NEXT_PUBLIC_API_URL`. */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8787';
-
-/**
- * Apprenant de demonstration.
- *
- * Provisoire : sera remplace par la session une fois le contexte
- * « Identity & Access » en place.
- */
-export const DEMO_USER_ID = 'demo';
 
 /** Erreur remontee par l'API, avec son statut HTTP. */
 export class ApiError extends Error {
@@ -39,6 +34,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     response = await fetch(`${API_URL}${path}`, {
       ...init,
+      // Envoie le cookie de session : sans lui, le Worker répond 401.
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json', ...init?.headers },
     });
   } catch {
@@ -47,35 +44,27 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    throw new ApiError(response.status, `L'API a repondu ${response.status}.`);
+    throw new ApiError(response.status, `L'API a repondu ${String(response.status)}.`);
   }
 
   return (await response.json()) as T;
 }
 
 /** Cartes a reviser maintenant. */
-export function fetchDueQueue(userId: string, limit = 20): Promise<DueQueue> {
-  return request<DueQueue>(
-    `/reviews/queue?userId=${encodeURIComponent(userId)}&limit=${String(limit)}`,
-  );
+export function fetchDueQueue(limit = 20): Promise<DueQueue> {
+  return request<DueQueue>(`/reviews/queue?limit=${String(limit)}`);
 }
 
 /** Intervalles qui seraient appliques pour chacune des 4 notes. */
-export function fetchPreview(userId: string, itemId: string): Promise<Preview> {
-  return request<Preview>(
-    `/reviews/preview?userId=${encodeURIComponent(userId)}&itemId=${encodeURIComponent(itemId)}`,
-  );
+export function fetchPreview(itemId: string): Promise<Preview> {
+  return request<Preview>(`/reviews/preview?itemId=${encodeURIComponent(itemId)}`);
 }
 
 /** Enregistre une revision et recupere la replanification. */
-export function submitReview(
-  userId: string,
-  itemId: string,
-  grade: ReviewGrade,
-): Promise<ReviewResult> {
+export function submitReview(itemId: string, grade: ReviewGrade): Promise<ReviewResult> {
   return request<ReviewResult>('/reviews', {
     method: 'POST',
-    body: JSON.stringify({ userId, itemId, grade }),
+    body: JSON.stringify({ itemId, grade }),
   });
 }
 
@@ -87,7 +76,6 @@ export function fetchLesson(lessonId: string): Promise<Lesson> {
 /** Soumet une réponse d'exercice ; renvoie correction + note FSRS. */
 export function submitAnswer(input: {
   lessonId: string;
-  userId: string;
   exerciseId: string;
   answer: ExerciseAnswer;
   assisted: boolean;
@@ -101,15 +89,12 @@ export function submitAnswer(input: {
 }
 
 /** Progression de gamification du jour (XP, objectif, série). */
-export function fetchProgress(userId: string, timezone: string): Promise<DailyStatus> {
-  return request<DailyStatus>(
-    `/progress?userId=${encodeURIComponent(userId)}&timezone=${encodeURIComponent(timezone)}`,
-  );
+export function fetchProgress(timezone: string): Promise<DailyStatus> {
+  return request<DailyStatus>(`/progress?timezone=${encodeURIComponent(timezone)}`);
 }
 
 /** Enregistre un gain d'XP (l'XP est calculé côté domaine). */
 export function incrementProgress(input: {
-  userId: string;
   event: XpEvent;
   timezone: string;
 }): Promise<IncrementResult> {
@@ -126,14 +111,17 @@ export function incrementProgress(input: {
  * un `Content-Type: application/json`. Ici on laisse le navigateur poser le
  * `Content-Type` et sa frontière (boundary) multipart lui-même.
  */
-export async function uploadDocument(userId: string, file: File): Promise<DocumentDto> {
+export async function uploadDocument(file: File): Promise<DocumentDto> {
   const form = new FormData();
   form.set('file', file);
-  form.set('userId', userId);
 
   let response: Response;
   try {
-    response = await fetch(`${API_URL}/documents`, { method: 'POST', body: form });
+    response = await fetch(`${API_URL}/documents`, {
+      method: 'POST',
+      body: form,
+      credentials: 'include',
+    });
   } catch {
     throw new ApiError(0, `L'API BAYT est injoignable sur ${API_URL}.`);
   }
@@ -153,8 +141,8 @@ export async function uploadDocument(userId: string, file: File): Promise<Docume
 }
 
 /** Documents de l'apprenant, du plus récent au plus ancien. */
-export function fetchDocuments(userId: string): Promise<DocumentList> {
-  return request<DocumentList>(`/documents?userId=${encodeURIComponent(userId)}`);
+export function fetchDocuments(): Promise<DocumentList> {
+  return request<DocumentList>('/documents');
 }
 
 /** Statut de traitement d'un document précis (utilisé par le polling). */
@@ -176,7 +164,10 @@ export function fetchDocumentCards(id: string): Promise<DocumentCards> {
 export async function deleteDocument(id: string): Promise<void> {
   let response: Response;
   try {
-    response = await fetch(`${API_URL}/documents/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    response = await fetch(`${API_URL}/documents/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
   } catch {
     throw new ApiError(0, `L'API BAYT est injoignable sur ${API_URL}.`);
   }
@@ -187,14 +178,14 @@ export async function deleteDocument(id: string): Promise<void> {
 }
 
 /** Chemin de progression : unités, leçons et leur état. */
-export function fetchPath(userId: string): Promise<LearningPath> {
-  return request<LearningPath>(`/path?userId=${encodeURIComponent(userId)}`);
+export function fetchPath(): Promise<LearningPath> {
+  return request<LearningPath>('/path');
 }
 
 /** Marque une leçon terminée (débloque la suivante) ; renvoie le chemin à jour. */
-export function markLessonComplete(userId: string, lessonId: string): Promise<LearningPath> {
+export function markLessonComplete(lessonId: string): Promise<LearningPath> {
   return request<LearningPath>(`/lessons/${encodeURIComponent(lessonId)}/complete`, {
     method: 'POST',
-    body: JSON.stringify({ userId }),
+    body: JSON.stringify({}),
   });
 }

@@ -6,6 +6,7 @@ import { InMemoryIngestionQueue } from '../../src/infrastructure/queue/cf-ingest
 import { InMemoryDocumentRepository } from '../../src/infrastructure/repositories/in-memory-document.repository.js';
 import { InMemoryReviewRepository } from '../../src/infrastructure/repositories/in-memory-review.repository.js';
 import { InMemoryObjectStorage } from '../../src/infrastructure/storage/in-memory-object-storage.js';
+import { alwaysUser } from '../support/session.js';
 
 let docs: InMemoryDocumentRepository;
 let queue: InMemoryIngestionQueue;
@@ -20,6 +21,7 @@ beforeEach(() => {
     objectStorage: new InMemoryObjectStorage(),
     ingestionQueue: queue,
     scheduler: new Scheduler(),
+    sessionVerifier: alwaysUser('demo'),
     clock: () => new Date('2026-03-01T12:00:00Z'),
   });
 });
@@ -138,8 +140,9 @@ describe('sans dépendances d\'ingestion', () => {
     const bare = createApp({
       repository: new InMemoryReviewRepository(),
       scheduler: new Scheduler(),
+      sessionVerifier: alwaysUser('demo'),
     });
 
-    expect((await bare.request('/documents?userId=demo')).status).toBe(404);
+    expect((await bare.request('/documents')).status).toBe(404);
   });
 });

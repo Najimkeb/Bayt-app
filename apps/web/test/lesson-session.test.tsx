@@ -22,6 +22,8 @@ vi.mock('@/lib/api/client', () => ({
   markLessonComplete: () => Promise.resolve({ units: [] }),
 }));
 
+vi.mock('@/lib/auth/use-user-id', () => ({ useUserId: () => 'demo' }));
+
 const { LessonSession } = await import('@/components/lesson/lesson-session');
 
 const LESSON: Lesson = {

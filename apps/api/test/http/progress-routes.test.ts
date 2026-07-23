@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../../src/http/app.js';
 import { InMemoryProgressRepository } from '../../src/infrastructure/repositories/in-memory-progress.repository.js';
 import { InMemoryReviewRepository } from '../../src/infrastructure/repositories/in-memory-review.repository.js';
+import { alwaysUser } from '../support/session.js';
 
 const NOW = new Date('2026-03-01T12:00:00Z');
 
@@ -16,6 +17,7 @@ beforeEach(() => {
     repository: new InMemoryReviewRepository(),
     progressRepository: progress,
     scheduler: new Scheduler(),
+    sessionVerifier: alwaysUser('demo'),
     clock: () => NOW,
   });
 });
@@ -42,9 +44,6 @@ describe('GET /progress', () => {
     expect(body.dailyGoal).toBe(50);
   });
 
-  it('exige un userId', async () => {
-    expect((await app.request('/progress')).status).toBe(400);
-  });
 });
 
 describe('POST /progress/increment', () => {
@@ -122,6 +121,7 @@ describe('sans progressRepository', () => {
     const bare = createApp({
       repository: new InMemoryReviewRepository(),
       scheduler: new Scheduler(),
+      sessionVerifier: alwaysUser('demo'),
     });
 
     expect((await bare.request('/progress?userId=demo')).status).toBe(404);

@@ -29,22 +29,38 @@ import { SubmitExerciseAnswer } from '../application/use-cases/submit-exercise-a
 import { SubmitReview } from '../application/use-cases/submit-review.js';
 import { presentAnswerResult, presentLesson } from './lesson-presenters.js';
 import { presentDueCard, presentPreview, presentReviewResult } from './presenters.js';
+import type { SessionVerifier } from './session.js';
 import {
-  completeLessonBodySchema,
-  documentsQuerySchema,
   dueQueueQuerySchema,
   incrementProgressBodySchema,
-  pathQuerySchema,
   previewQuerySchema,
   progressQuerySchema,
   submitAnswerBodySchema,
   submitReviewBodySchema,
 } from './schemas.js';
 
+/** Variables posées dans le contexte Hono par le middleware de session. */
+interface Variables {
+  /** Identifiant de l'apprenant **authentifié** — jamais fourni par le client. */
+  userId: string;
+}
+
 /** Dependances injectees dans l'application HTTP. */
 export interface AppDependencies {
   readonly repository: ReviewRepository;
   readonly scheduler: Scheduler;
+  /**
+   * Vérificateur de session : traduit les en-têtes d'une requête en `userId`
+   * authentifié. Toutes les routes métier le traversent ; sans session valide,
+   * la requête est refusée (401).
+   */
+  readonly sessionVerifier: SessionVerifier;
+  /**
+   * Handler des routes d'authentification (`/api/auth/*`), fourni par Better
+   * Auth. Optionnel : les tests n'en ont pas besoin (ils vérifient la session
+   * via un double). Absent → les routes `/api/auth/*` ne sont pas montées.
+   */
+  readonly authHandler?: (request: Request) => Response | Promise<Response>;
   /** Persistance des leçons ; les routes `/lessons` ne sont montées que si fournie. */
   readonly lessonRepository?: LessonRepository;
   /** Persistance de la progression ; les routes `/progress` ne sont montées que si fournie. */
@@ -64,7 +80,8 @@ export interface AppDependencies {
    * Origines autorisees a appeler l'API depuis un navigateur.
    *
    * En developpement, le front Next.js tourne sur un autre port que le Worker :
-   * sans CORS, le navigateur bloque les requetes.
+   * sans CORS, le navigateur bloque les requetes. Les cookies de session
+   * imposent `credentials: true` et une origine précise (jamais `*`).
    */
   readonly allowedOrigins?: readonly string[];
 }
@@ -72,16 +89,24 @@ export interface AppDependencies {
 /** Origines de developpement local (Next.js). */
 const DEV_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000'] as const;
 
+/** Chemins publics : ni session ni 401 (sonde de vie + routes d'auth). */
+function isPublicPath(path: string): boolean {
+  return path === '/health' || path.startsWith('/api/auth/');
+}
+
 /**
  * Application HTTP « Reviser une carte ».
  *
  * Ne contient aucune regle metier : elle valide, delegue aux cas d'usage et
  * presente. Elle ignore tout de D1 — c'est le point d'entree Worker qui choisit
- * l'implementation du repository.
+ * l'implementation du repository. L'`userId` provient **toujours** de la session
+ * authentifiée, jamais d'un paramètre de requête.
  */
 export function createApp({
   repository,
   scheduler,
+  sessionVerifier,
+  authHandler,
   lessonRepository,
   progressRepository,
   pathRepository,
@@ -95,7 +120,7 @@ export function createApp({
   const previewReview = new PreviewReview(repository, scheduler);
   const submitReview = new SubmitReview(repository, scheduler);
 
-  const app = new Hono();
+  const app = new Hono<{ Variables: Variables }>();
 
   app.use(
     '*',
@@ -103,25 +128,51 @@ export function createApp({
       origin: [...allowedOrigins],
       allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
       allowHeaders: ['Content-Type'],
+      // Les cookies de session traversent les origines (front ≠ Worker).
+      credentials: true,
     }),
   );
+
+  /**
+   * Garde d'authentification.
+   *
+   * Sur toute route non publique : exige une session valide, sinon 401. Le
+   * `userId` authentifié est posé dans le contexte pour toute la chaîne aval —
+   * les handlers ne l'acceptent plus jamais du client.
+   */
+  app.use('*', async (context, next) => {
+    if (context.req.method === 'OPTIONS' || isPublicPath(context.req.path)) {
+      return next();
+    }
+
+    const userId = await sessionVerifier.verify(context.req.raw.headers);
+    if (userId === null) {
+      return context.json({ error: 'unauthorized' }, 401);
+    }
+
+    context.set('userId', userId);
+
+    return next();
+  });
+
+  /** Routes d'authentification Better Auth (inscription, connexion, session…). */
+  if (authHandler !== undefined) {
+    app.on(['GET', 'POST'], '/api/auth/*', (context) => authHandler(context.req.raw));
+  }
 
   /** Sonde de vie, utile en local comme en production. */
   app.get('/health', (context) => context.json({ status: 'ok', now: clock().toISOString() }));
 
-  /** File des cartes dues pour un apprenant. */
+  /** File des cartes dues pour l'apprenant authentifié. */
   app.get('/reviews/queue', async (context) => {
-    const query = dueQueueQuerySchema.safeParse({
-      userId: context.req.query('userId'),
-      limit: context.req.query('limit'),
-    });
+    const query = dueQueueQuerySchema.safeParse({ limit: context.req.query('limit') });
 
     if (!query.success) {
       return context.json({ error: 'invalid_request', details: query.error.issues }, 400);
     }
 
     const now = clock();
-    const cards = await getDueQueue.execute(query.data.userId, now, query.data.limit);
+    const cards = await getDueQueue.execute(context.get('userId'), now, query.data.limit);
 
     return context.json({
       now: now.toISOString(),
@@ -135,10 +186,7 @@ export function createApp({
    * Alimente l'intervalle affiche sous chaque bouton de notation.
    */
   app.get('/reviews/preview', async (context) => {
-    const query = previewQuerySchema.safeParse({
-      userId: context.req.query('userId'),
-      itemId: context.req.query('itemId'),
-    });
+    const query = previewQuerySchema.safeParse({ itemId: context.req.query('itemId') });
 
     if (!query.success) {
       return context.json({ error: 'invalid_request', details: query.error.issues }, 400);
@@ -147,7 +195,7 @@ export function createApp({
     const now = clock();
 
     try {
-      const preview = await previewReview.execute(query.data.userId, query.data.itemId, now);
+      const preview = await previewReview.execute(context.get('userId'), query.data.itemId, now);
 
       return context.json(presentPreview(query.data.itemId, now, preview));
     } catch (error) {
@@ -167,11 +215,11 @@ export function createApp({
       return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
     }
 
-    const { userId, itemId, grade, reviewedAt } = body.data;
+    const { itemId, grade, reviewedAt } = body.data;
     const now = reviewedAt === undefined ? clock() : new Date(reviewedAt);
 
     try {
-      const result = await submitReview.execute(userId, itemId, grade, now);
+      const result = await submitReview.execute(context.get('userId'), itemId, grade, now);
 
       return context.json(presentReviewResult(result), 201);
     } catch (error) {
@@ -212,12 +260,12 @@ export function createApp({
         return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
       }
 
-      const { userId, exerciseId, answer, assisted, reviewedAt } = body.data;
+      const { exerciseId, answer, assisted, reviewedAt } = body.data;
       const now = reviewedAt === undefined ? clock() : new Date(reviewedAt);
 
       try {
         const result = await submitAnswer.execute({
-          userId,
+          userId: context.get('userId'),
           lessonId: context.req.param('lessonId'),
           exerciseId,
           answer,
@@ -245,16 +293,13 @@ export function createApp({
 
     /** Progression de gamification du jour (XP, objectif, série). */
     app.get('/progress', async (context) => {
-      const query = progressQuerySchema.safeParse({
-        userId: context.req.query('userId'),
-        timezone: context.req.query('timezone'),
-      });
+      const query = progressQuerySchema.safeParse({ timezone: context.req.query('timezone') });
 
       if (!query.success) {
         return context.json({ error: 'invalid_request', details: query.error.issues }, 400);
       }
 
-      const status = await getProgress.execute(query.data.userId, clock(), query.data.timezone);
+      const status = await getProgress.execute(context.get('userId'), clock(), query.data.timezone);
 
       return context.json(status);
     });
@@ -267,9 +312,9 @@ export function createApp({
         return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
       }
 
-      const { userId, event, timezone, at } = body.data;
+      const { event, timezone, at } = body.data;
       const now = at === undefined ? clock() : new Date(at);
-      const result = await incrementProgress.execute(userId, event, now, timezone);
+      const result = await incrementProgress.execute(context.get('userId'), event, now, timezone);
 
       return context.json(result, 201);
     });
@@ -281,25 +326,13 @@ export function createApp({
 
     /** Chemin de progression : unités, leçons et leur état (nœuds). */
     app.get('/path', async (context) => {
-      const query = pathQuerySchema.safeParse({ userId: context.req.query('userId') });
-
-      if (!query.success) {
-        return context.json({ error: 'invalid_request', details: query.error.issues }, 400);
-      }
-
-      return context.json(await getPath.execute(query.data.userId));
+      return context.json(await getPath.execute(context.get('userId')));
     });
 
     /** Marque une leçon terminée (débloque la suivante) et renvoie le chemin à jour. */
     app.post('/lessons/:lessonId/complete', async (context) => {
-      const body = completeLessonBodySchema.safeParse(await readJson(context.req.raw));
-
-      if (!body.success) {
-        return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
-      }
-
       const path = await completeLesson.execute(
-        body.data.userId,
+        context.get('userId'),
         context.req.param('lessonId'),
         clock(),
       );
@@ -335,12 +368,9 @@ export function createApp({
         return context.json({ error: 'invalid_request', detail: 'champ « file » manquant' }, 400);
       }
 
-      const userIdField = form.get('userId');
-      const userId = typeof userIdField === 'string' && userIdField !== '' ? userIdField : 'demo';
-
       try {
         const document = await submitDocument.execute({
-          userId,
+          userId: context.get('userId'),
           filename: file.name,
           contentType: file.type === '' ? null : file.type,
           bytes: new Uint8Array(await file.arrayBuffer()),
@@ -356,24 +386,18 @@ export function createApp({
       }
     });
 
-    /** Liste des documents d'un apprenant, du plus récent au plus ancien. */
+    /** Liste des documents de l'apprenant authentifié, du plus récent au plus ancien. */
     app.get('/documents', async (context) => {
-      const query = documentsQuerySchema.safeParse({ userId: context.req.query('userId') });
-
-      if (!query.success) {
-        return context.json({ error: 'invalid_request', details: query.error.issues }, 400);
-      }
-
-      const docs = await documentRepository.list(query.data.userId);
+      const docs = await documentRepository.list(context.get('userId'));
 
       return context.json({ documents: docs.map(presentDocument) });
     });
 
-    /** Statut de traitement d'un document précis. */
+    /** Statut d'un document précis — réservé à son propriétaire. */
     app.get('/documents/:id', async (context) => {
       const document = await documentRepository.findById(context.req.param('id'));
 
-      if (document === null) {
+      if (document === null || document.userId !== context.get('userId')) {
         return context.json({ error: 'document_not_found' }, 404);
       }
 
@@ -383,14 +407,14 @@ export function createApp({
     /**
      * Cartes générées par un document (recto/verso) — pour l'aperçu.
      *
-     * Lecture seule : montrer le produit fini de l'ingestion. Sans lien avec
+     * Réservé au propriétaire : un autre apprenant reçoit 404. Sans lien avec
      * l'API de leçon, qui masque volontairement les solutions.
      */
     app.get('/documents/:id/cards', async (context) => {
       const id = context.req.param('id');
       const document = await documentRepository.findById(id);
 
-      if (document === null) {
+      if (document === null || document.userId !== context.get('userId')) {
         return context.json({ error: 'document_not_found' }, 404);
       }
 
@@ -402,11 +426,10 @@ export function createApp({
     /**
      * Supprime un document et ses cartes (fichier source R2 compris).
      *
-     * Utile pour nettoyer les documents en échec sans réingérer. 204 si
-     * supprimé, 404 si déjà absent.
+     * Réservé au propriétaire. 204 si supprimé, 404 si absent ou pas à lui.
      */
     app.delete('/documents/:id', async (context) => {
-      const removed = await deleteDocument.execute(context.req.param('id'));
+      const removed = await deleteDocument.execute(context.req.param('id'), context.get('userId'));
 
       return removed
         ? context.body(null, 204)

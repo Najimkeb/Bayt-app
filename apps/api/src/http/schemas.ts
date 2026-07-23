@@ -6,31 +6,24 @@ import { z } from 'zod';
  *
  * Aucune donnee non validee n'atteint la couche application : les cas d'usage
  * peuvent supposer leurs invariants acquis.
- */
-
-/**
- * Identifiant d'apprenant.
  *
- * Provisoirement passe en parametre : il viendra de la session une fois le
- * contexte « Identity & Access » en place (cf. docs/bayt-fondations.md §2.5).
+ * **L'`userId` ne figure plus dans aucune entrée** : il provient exclusivement
+ * de la session authentifiée (cf. `SessionVerifier` + middleware). Le client ne
+ * peut plus désigner un autre apprenant que lui-même.
  */
-const userId = z.string().min(1).max(128);
 
 /** Nombre maximum de cartes servies en une session de revision. */
 const MAX_QUEUE_LIMIT = 100;
 
 export const dueQueueQuerySchema = z.object({
-  userId,
   limit: z.coerce.number().int().min(1).max(MAX_QUEUE_LIMIT).optional(),
 });
 
 export const previewQuerySchema = z.object({
-  userId,
   itemId: z.string().min(1).max(128),
 });
 
 export const submitReviewBodySchema = z.object({
-  userId,
   itemId: z.string().min(1).max(128),
   grade: z.enum(REVIEW_GRADES),
   /** Instant de la revision ; par defaut, l'horloge du serveur. */
@@ -53,7 +46,6 @@ const exerciseAnswerSchema = z.discriminatedUnion('kind', [
 ]);
 
 export const submitAnswerBodySchema = z.object({
-  userId,
   exerciseId: z.string().min(1).max(128),
   answer: exerciseAnswerSchema,
   /** Un essai raté ou un indice a précédé cette réponse. */
@@ -65,7 +57,6 @@ export const submitAnswerBodySchema = z.object({
 const timezone = z.string().min(1).max(64).default('UTC');
 
 export const progressQuerySchema = z.object({
-  userId,
   timezone,
 });
 
@@ -76,18 +67,11 @@ const xpEventSchema = z.discriminatedUnion('type', [
 ]);
 
 export const incrementProgressBodySchema = z.object({
-  userId,
   event: xpEventSchema,
   timezone,
   /** Instant du gain ; par défaut, l'horloge du serveur. */
   at: z.iso.datetime().optional(),
 });
-
-export const pathQuerySchema = z.object({ userId });
-
-export const completeLessonBodySchema = z.object({ userId });
-
-export const documentsQuerySchema = z.object({ userId });
 
 export type DueQueueQuery = z.infer<typeof dueQueueQuerySchema>;
 export type SubmitReviewBody = z.infer<typeof submitReviewBodySchema>;

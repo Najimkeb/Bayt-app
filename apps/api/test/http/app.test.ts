@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { LearningItemView } from '../../src/application/ports/review-repository.js';
 import { createApp } from '../../src/http/app.js';
 import { InMemoryReviewRepository } from '../../src/infrastructure/repositories/in-memory-review.repository.js';
+import { alwaysUser } from '../support/session.js';
 
 const NOW = new Date('2026-03-01T09:00:00.000Z');
 
@@ -21,7 +22,12 @@ let app: ReturnType<typeof createApp>;
 
 beforeEach(() => {
   repository = new InMemoryReviewRepository(ITEMS);
-  app = createApp({ repository, scheduler: new Scheduler(), clock: () => NOW });
+  app = createApp({
+    repository,
+    scheduler: new Scheduler(),
+    sessionVerifier: alwaysUser('demo'),
+    clock: () => NOW,
+  });
 });
 
 describe('GET /reviews/queue', () => {
@@ -40,12 +46,6 @@ describe('GET /reviews/queue', () => {
     const body = (await response.json()) as { count: number };
 
     expect(body.count).toBe(1);
-  });
-
-  it('rejette une requete sans apprenant', async () => {
-    const response = await app.request('/reviews/queue');
-
-    expect(response.status).toBe(400);
   });
 
   it('rejette une limite hors bornes', async () => {
@@ -153,7 +153,6 @@ describe('POST /reviews', () => {
 
   it.each([
     ['note invalide', { userId: 'demo', itemId: 'item-a', grade: 'Parfait' }],
-    ['apprenant manquant', { itemId: 'item-a', grade: 'Good' }],
     ['item manquant', { userId: 'demo', grade: 'Good' }],
     ['date invalide', { userId: 'demo', itemId: 'item-a', grade: 'Good', reviewedAt: 'hier' }],
   ])('renvoie 400 : %s', async (_label, body) => {

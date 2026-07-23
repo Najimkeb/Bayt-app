@@ -19,6 +19,8 @@ vi.mock('@/lib/api/client', () => ({
   fetchProgress: () => fetchProgress(),
 }));
 
+vi.mock('@/lib/auth/use-user-id', () => ({ useUserId: () => 'demo' }));
+
 const { HomeScreen } = await import('@/components/home/home-screen');
 
 const PATH: LearningPath = {
