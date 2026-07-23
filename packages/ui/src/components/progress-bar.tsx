@@ -41,11 +41,21 @@ export function ProgressBar({
       aria-valuemax={100}
       aria-valuenow={percent}
       aria-label={label}
-      className={cn('h-4 w-full overflow-hidden rounded-full bg-surface-hover', className)}
+      className={cn('w-full rounded-full bg-surface-hover', className)}
+      // Géométrie posée en style inline : la hauteur et le clipping ne dépendent
+      // pas de classes Tailwind (`h-4`, `overflow-hidden`) qui, venant de ce
+      // paquet, ne sont pas toujours régénérées par l'app consommatrice.
+      style={{ height: '1rem', overflow: 'hidden' }}
     >
       <div
-        className="relative h-full rounded-full transition-[width] duration-500 ease-out"
-        style={{ width: `${String(percent)}%`, backgroundColor: FILL_COLOR[color] }}
+        className="relative rounded-full transition-[width] duration-500 ease-out"
+        // `height: 100%` inline (et non la classe `h-full`) : sans cela le
+        // remplissage a une hauteur nulle et reste invisible malgré sa largeur.
+        style={{
+          width: `${String(percent)}%`,
+          height: '100%',
+          backgroundColor: FILL_COLOR[color],
+        }}
       >
         {/* Reflet : la petite touche de relief "candy" de Duolingo. */}
         {ratio > 0.04 && (
