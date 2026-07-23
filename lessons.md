@@ -72,5 +72,14 @@ Choix pédagogique explicite (retrieval practice) : un exercice raté **revient 
 **L023 — Les solutions ne quittent jamais l'API de lecture d'une leçon.**
 `GET /lessons/:id` renvoie les exercices **sans** `answerIndex`/`answer`/appariement correct ; pour une association, les côtés « droit » sont **mélangés** (Fisher-Yates dans le présentateur). La correction n'arrive qu'en réponse à `POST /lessons/:id/answers`. Verrouillé par un test HTTP (« ne divulgue jamais les solutions »).
 
+**L024 — Gamification : motivation, jamais un pilote de la mémoire.**
+XP / série / objectif quotidien vivent dans `packages/domain/src/gamification/` (purs, testés) et dans une table `user_progress` distincte. Ils n'influencent **jamais** FSRS. XP : exercice réussi = 10, carte révisée = 4/6/8/10 selon Again/Hard/Good/Easy. Le montant est calculé par le domaine (`xpForEvent`) à partir d'un **événement** envoyé à `POST /progress/increment` — le client ne dicte pas un montant arbitraire.
+
+**L025 — Série robuste au fuseau : le « jour » se calcule dans le fuseau de l'apprenant.**
+`localDay(now, timeZone)` (Intl, repli UTC) donne le jour local ; la série se prolonge sur un jour consécutif et se rompt dès qu'un jour est manqué. `lastGoalDay` est stocké pour juger la vivacité **à la lecture** (`currentStreak`/`dailyStatus`) sans écrire en base. `now` est toujours un paramètre explicite (jamais `Date.now()`), donc déterministe et testable.
+
+**L026 — Pas de cœurs ni de vies (rappel, appliqué à la gamification).**
+On récompense l'effort (XP, flamme, objectif), on ne punit jamais l'erreur par une « vie » perdue. Célébrations spéciales quand l'objectif du jour est atteint et quand la série augmente.
+
 **L005 — Convention de cette mémoire.**
 Une leçon = une entrée courte et actionnable. Noter le nouveau et le confirmé, pas le déjà-écrit. Mettre à jour une leçon plutôt que la dupliquer.

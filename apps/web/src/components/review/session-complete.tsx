@@ -4,6 +4,8 @@ import { Button, Mascot } from '@bayt/ui';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { ReactElement } from 'react';
 
+import { XpReward, type XpRewardData } from '@/components/progress/xp-reward';
+
 import { mascotMessage } from './mascot-message';
 
 /**
@@ -11,9 +13,15 @@ import { mascotMessage } from './mascot-message';
  *
  * On celebre l'effort, pas la performance, et on explique ce qui se passe
  * ensuite — la revision espacee travaille pendant que l'apprenant fait autre
- * chose.
+ * chose. On y montre aussi l'XP gagné, l'objectif et la série.
  */
-export function SessionComplete({ onRefresh }: { onRefresh: () => void }): ReactElement {
+export function SessionComplete({
+  onRefresh,
+  reward,
+}: {
+  onRefresh: () => void;
+  reward: XpRewardData;
+}): ReactElement {
   const reduceMotion = useReducedMotion();
 
   return (
@@ -32,6 +40,8 @@ export function SessionComplete({ onRefresh }: { onRefresh: () => void }): React
           {mascotMessage('celebrating')}
         </p>
       </div>
+
+      {reward.xpGained > 0 && <XpReward data={reward} />}
 
       <p className="rounded-[var(--radius-card)] border-2 border-border bg-surface px-5 py-4 text-base font-bold leading-relaxed text-muted-foreground">
         Reviens quand les prochaines cartes arriveront à échéance : réviser trop tôt n&apos;apporte

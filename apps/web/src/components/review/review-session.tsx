@@ -5,9 +5,11 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 
 import { DEMO_USER_ID } from '@/lib/api/client';
+import { useIncrementProgress } from '@/lib/api/progress-queries';
 import { useDueQueue, usePreview, useSubmitReview } from '@/lib/api/queries';
 import type { ReviewGrade } from '@/lib/api/types';
 import { formatInterval } from '@/lib/format-interval';
+import type { XpRewardData } from '@/components/progress/xp-reward';
 
 import { Flashcard } from './flashcard';
 import { GradeButtons } from './grade-buttons';
@@ -38,6 +40,7 @@ export function ReviewSession(): ReactElement {
 
   const queue = useDueQueue(userId);
   const submit = useSubmitReview(userId);
+  const increment = useIncrementProgress(userId);
 
   const [revealed, setRevealed] = useState(false);
   const [lastGrade, setLastGrade] = useState<ReviewGrade | null>(null);
@@ -45,6 +48,14 @@ export function ReviewSession(): ReactElement {
   const [reaction, setReaction] = useState<MascotMood | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [flash, setFlash] = useState<Flash | null>(null);
+  /** Récompense cumulée de la session (XP, objectif, série). */
+  const [reward, setReward] = useState<XpRewardData>({
+    xpGained: 0,
+    goalReached: false,
+    streakIncreased: false,
+    streak: 0,
+    goalMet: false,
+  });
 
   const card = queue.data?.cards[0] ?? null;
   const itemId = card?.item.id ?? null;
@@ -94,6 +105,22 @@ export function ReviewSession(): ReactElement {
         {
           onSuccess: (result) => {
             setFeedback(`Revu. Prochain passage dans ${formatInterval(result.review.intervalMs)}.`);
+
+            // Chaque carte révisée rapporte de l'XP (gamification, distincte de FSRS).
+            increment.mutate(
+              { type: 'review', grade: value },
+              {
+                onSuccess: (gain) => {
+                  setReward((prev) => ({
+                    xpGained: prev.xpGained + gain.xpGained,
+                    goalReached: prev.goalReached || gain.goalJustReached,
+                    streakIncreased: prev.streakIncreased || gain.streakIncreased,
+                    streak: gain.status.streak,
+                    goalMet: gain.status.goalMet,
+                  }));
+                },
+              },
+            );
           },
           onError: () => {
             setFeedback('La révision n\'a pas pu être enregistrée. La carte reste dans la file.');
@@ -101,7 +128,7 @@ export function ReviewSession(): ReactElement {
         },
       );
     },
-    [itemId, submit],
+    [itemId, submit, increment],
   );
 
   /** Raccourcis clavier : Espace révèle, 1 à 4 notent. */
@@ -160,7 +187,7 @@ export function ReviewSession(): ReactElement {
   }
 
   if (card === null) {
-    return <SessionComplete onRefresh={() => void queue.refetch()} />;
+    return <SessionComplete onRefresh={() => void queue.refetch()} reward={reward} />;
   }
 
   return (

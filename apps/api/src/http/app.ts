@@ -8,9 +8,12 @@ import {
   LessonNotFoundError,
 } from '../application/errors.js';
 import type { LessonRepository } from '../application/ports/lesson-repository.js';
+import type { ProgressRepository } from '../application/ports/progress-repository.js';
 import type { ReviewRepository } from '../application/ports/review-repository.js';
 import { GetDueQueue } from '../application/use-cases/get-due-queue.js';
 import { GetLesson } from '../application/use-cases/get-lesson.js';
+import { GetProgress } from '../application/use-cases/get-progress.js';
+import { IncrementProgress } from '../application/use-cases/increment-progress.js';
 import { PreviewReview } from '../application/use-cases/preview-review.js';
 import { SubmitExerciseAnswer } from '../application/use-cases/submit-exercise-answer.js';
 import { SubmitReview } from '../application/use-cases/submit-review.js';
@@ -18,7 +21,9 @@ import { presentAnswerResult, presentLesson } from './lesson-presenters.js';
 import { presentDueCard, presentPreview, presentReviewResult } from './presenters.js';
 import {
   dueQueueQuerySchema,
+  incrementProgressBodySchema,
   previewQuerySchema,
+  progressQuerySchema,
   submitAnswerBodySchema,
   submitReviewBodySchema,
 } from './schemas.js';
@@ -29,6 +34,8 @@ export interface AppDependencies {
   readonly scheduler: Scheduler;
   /** Persistance des leçons ; les routes `/lessons` ne sont montées que si fournie. */
   readonly lessonRepository?: LessonRepository;
+  /** Persistance de la progression ; les routes `/progress` ne sont montées que si fournie. */
+  readonly progressRepository?: ProgressRepository;
   /** Horloge injectable — la rend testable et le handler pur. */
   readonly clock?: () => Date;
   /**
@@ -54,6 +61,7 @@ export function createApp({
   repository,
   scheduler,
   lessonRepository,
+  progressRepository,
   clock = () => new Date(),
   allowedOrigins = DEV_ORIGINS,
 }: AppDependencies) {
@@ -202,6 +210,42 @@ export function createApp({
 
         throw error;
       }
+    });
+  }
+
+  if (progressRepository !== undefined) {
+    const getProgress = new GetProgress(progressRepository);
+    const incrementProgress = new IncrementProgress(progressRepository);
+
+    /** Progression de gamification du jour (XP, objectif, série). */
+    app.get('/progress', async (context) => {
+      const query = progressQuerySchema.safeParse({
+        userId: context.req.query('userId'),
+        timezone: context.req.query('timezone'),
+      });
+
+      if (!query.success) {
+        return context.json({ error: 'invalid_request', details: query.error.issues }, 400);
+      }
+
+      const status = await getProgress.execute(query.data.userId, clock(), query.data.timezone);
+
+      return context.json(status);
+    });
+
+    /** Enregistre un gain d'XP (l'XP est calculé par le domaine, pas par le client). */
+    app.post('/progress/increment', async (context) => {
+      const body = incrementProgressBodySchema.safeParse(await readJson(context.req.raw));
+
+      if (!body.success) {
+        return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
+      }
+
+      const { userId, event, timezone, at } = body.data;
+      const now = at === undefined ? clock() : new Date(at);
+      const result = await incrementProgress.execute(userId, event, now, timezone);
+
+      return context.json(result, 201);
     });
   }
 

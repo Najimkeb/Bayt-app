@@ -61,6 +61,29 @@ export const submitAnswerBodySchema = z.object({
   reviewedAt: z.iso.datetime().optional(),
 });
 
+/** Fuseau horaire IANA de l'apprenant (défaut UTC si absent). */
+const timezone = z.string().min(1).max(64).default('UTC');
+
+export const progressQuerySchema = z.object({
+  userId,
+  timezone,
+});
+
+/** Événement porteur d'XP, discriminé par `type` (aligné sur `XpEvent`). */
+const xpEventSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('review'), grade: z.enum(REVIEW_GRADES) }),
+  z.object({ type: z.literal('exercise'), correct: z.boolean() }),
+]);
+
+export const incrementProgressBodySchema = z.object({
+  userId,
+  event: xpEventSchema,
+  timezone,
+  /** Instant du gain ; par défaut, l'horloge du serveur. */
+  at: z.iso.datetime().optional(),
+});
+
 export type DueQueueQuery = z.infer<typeof dueQueueQuerySchema>;
 export type SubmitReviewBody = z.infer<typeof submitReviewBodySchema>;
 export type SubmitAnswerBody = z.infer<typeof submitAnswerBodySchema>;
+export type IncrementProgressBody = z.infer<typeof incrementProgressBodySchema>;

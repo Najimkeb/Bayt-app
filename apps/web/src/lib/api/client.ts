@@ -1,4 +1,5 @@
 import type { AnswerResult, ExerciseAnswer, Lesson } from './lesson-types';
+import type { DailyStatus, IncrementResult, XpEvent } from './progress-types';
 import type { DueQueue, Preview, ReviewGrade, ReviewResult } from './types';
 
 /**
@@ -94,5 +95,24 @@ export function submitAnswer(input: {
   return request<AnswerResult>(`/lessons/${encodeURIComponent(lessonId)}/answers`, {
     method: 'POST',
     body: JSON.stringify(body),
+  });
+}
+
+/** Progression de gamification du jour (XP, objectif, série). */
+export function fetchProgress(userId: string, timezone: string): Promise<DailyStatus> {
+  return request<DailyStatus>(
+    `/progress?userId=${encodeURIComponent(userId)}&timezone=${encodeURIComponent(timezone)}`,
+  );
+}
+
+/** Enregistre un gain d'XP (l'XP est calculé côté domaine). */
+export function incrementProgress(input: {
+  userId: string;
+  event: XpEvent;
+  timezone: string;
+}): Promise<IncrementResult> {
+  return request<IncrementResult>('/progress/increment', {
+    method: 'POST',
+    body: JSON.stringify(input),
   });
 }

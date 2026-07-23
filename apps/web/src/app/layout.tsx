@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Nunito } from 'next/font/google';
 import type { ReactElement, ReactNode } from 'react';
 
+import { ProgressHeader } from '@/components/progress/progress-header';
 import { ThemeToggle, themeInitScript } from '@/components/theme-toggle';
 
 import './globals.css';
@@ -58,7 +59,10 @@ export default function RootLayout({ children }: { children: ReactNode }): React
                   apprendre pour de bon
                 </span>
               </span>
-              <ThemeToggle />
+              <div className="flex items-center gap-2 sm:gap-4">
+                <ProgressHeader />
+                <ThemeToggle />
+              </div>
             </header>
 
             <main

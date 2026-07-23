@@ -14,6 +14,10 @@ vi.mock('@/lib/api/client', () => ({
   API_URL: 'http://localhost:8787',
   fetchLesson: () => fetchLesson(),
   submitAnswer: () => submitAnswer(),
+  fetchProgress: () =>
+    Promise.resolve({ xpToday: 0, dailyGoal: 50, goalMet: false, ratio: 0, streak: 0, longestStreak: 0, xpTotal: 0 }),
+  incrementProgress: () =>
+    Promise.resolve({ xpGained: 10, goalJustReached: false, streakIncreased: false, status: { xpToday: 10, dailyGoal: 50, goalMet: false, ratio: 0.2, streak: 0, longestStreak: 0, xpTotal: 10 } }),
 }));
 
 const { LessonSession } = await import('@/components/lesson/lesson-session');

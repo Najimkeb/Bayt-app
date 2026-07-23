@@ -143,3 +143,20 @@ export const exercises = sqliteTable(
   },
   (table) => [index('exercises_lesson_position_idx').on(table.lessonId, table.position)],
 );
+
+/**
+ * Progression de gamification par apprenant.
+ *
+ * Couche de motivation, distincte du moteur de mémoire (elle n'influence jamais
+ * FSRS). Les dates sont des chaînes `YYYY-MM-DD` dans le fuseau de l'apprenant.
+ */
+export const userProgress = sqliteTable('user_progress', {
+  userId: text('user_id').primaryKey(),
+  xpTotal: integer('xp_total').notNull(),
+  xpToday: integer('xp_today').notNull(),
+  day: text('day'),
+  streak: integer('streak').notNull(),
+  longestStreak: integer('longest_streak').notNull(),
+  dailyGoal: integer('daily_goal').notNull(),
+  lastGoalDay: text('last_goal_day'),
+});

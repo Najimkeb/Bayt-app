@@ -21,6 +21,10 @@ vi.mock('@/lib/api/client', () => ({
   fetchDueQueue: () => fetchDueQueue(),
   fetchPreview: () => fetchPreview(),
   submitReview: () => submitReview(),
+  fetchProgress: () =>
+    Promise.resolve({ xpToday: 0, dailyGoal: 50, goalMet: false, ratio: 0, streak: 0, longestStreak: 0, xpTotal: 0 }),
+  incrementProgress: () =>
+    Promise.resolve({ xpGained: 8, goalJustReached: false, streakIncreased: false, status: { xpToday: 8, dailyGoal: 50, goalMet: false, ratio: 0.16, streak: 0, longestStreak: 0, xpTotal: 8 } }),
 }));
 
 const { ReviewSession } = await import('@/components/review/review-session');

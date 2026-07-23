@@ -5,13 +5,22 @@ import { motion, useReducedMotion } from 'framer-motion';
 import Link from 'next/link';
 import type { ReactElement } from 'react';
 
+import { XpReward, type XpRewardData } from '@/components/progress/xp-reward';
+
 /**
- * Fin de leçon célébratoire : mascotte `celebrating` en grand.
+ * Fin de leçon célébratoire : mascotte `celebrating` en grand, XP gagné,
+ * objectif et série.
  *
  * On célèbre l'effort et on rappelle ce qui se passe ensuite — les items révisés
  * reviendront au bon moment via la révision espacée.
  */
-export function LessonComplete({ title }: { title: string }): ReactElement {
+export function LessonComplete({
+  title,
+  reward,
+}: {
+  title: string;
+  reward: XpRewardData;
+}): ReactElement {
   const reduceMotion = useReducedMotion();
 
   return (
@@ -30,6 +39,8 @@ export function LessonComplete({ title }: { title: string }): ReactElement {
           reviendront au bon moment.
         </p>
       </div>
+
+      <XpReward data={reward} />
 
       <Link href="/review" className={buttonVariants({ variant: 'green', size: 'lg' })}>
         Réviser mes cartes

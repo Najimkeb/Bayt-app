@@ -7,6 +7,8 @@ import { useCallback, useMemo, useState, type ReactElement } from 'react';
 import { DEMO_USER_ID } from '@/lib/api/client';
 import { useLesson, useSubmitAnswer } from '@/lib/api/lesson-queries';
 import type { AnswerResult, ExerciseAnswer, PresentedExercise } from '@/lib/api/lesson-types';
+import { useIncrementProgress } from '@/lib/api/progress-queries';
+import type { XpRewardData } from '@/components/progress/xp-reward';
 
 import { FillBlankExerciseView } from './exercises/fill-blank-exercise';
 import { MatchingExerciseView } from './exercises/matching-exercise';
@@ -29,6 +31,7 @@ export function LessonSession({ lessonId }: { lessonId: string }): ReactElement 
 
   const lesson = useLesson(lessonId);
   const submit = useSubmitAnswer(lessonId, userId);
+  const increment = useIncrementProgress(userId);
 
   /** File des exercices restants (par id), dans l'ordre à jouer. */
   const [queue, setQueue] = useState<string[] | null>(null);
@@ -36,6 +39,14 @@ export function LessonSession({ lessonId }: { lessonId: string }): ReactElement 
   const [result, setResult] = useState<AnswerResult | null>(null);
   /** Exercices déjà ratés : leur prochaine réussite comptera comme « Hard ». */
   const [assisted, setAssisted] = useState<ReadonlySet<string>>(new Set());
+  /** Récompense cumulée de la session (XP, objectif, série). */
+  const [reward, setReward] = useState<XpRewardData>({
+    xpGained: 0,
+    goalReached: false,
+    streakIncreased: false,
+    streak: 0,
+    goalMet: false,
+  });
 
   // Initialise la file dès que la leçon est chargée.
   const exercises = lesson.data?.exercises;
@@ -60,9 +71,32 @@ export function LessonSession({ lessonId }: { lessonId: string }): ReactElement 
 
     submit.mutate(
       { exerciseId: current.id, answer: draft, assisted: assisted.has(current.id) },
-      { onSuccess: (answerResult) => setResult(answerResult) },
+      {
+        onSuccess: (answerResult) => {
+          setResult(answerResult);
+
+          // Un exercice réussi rapporte de l'XP (la gamification est distincte du
+          // moteur FSRS, qui a déjà enregistré la révision côté API).
+          if (answerResult.correct) {
+            increment.mutate(
+              { type: 'exercise', correct: true },
+              {
+                onSuccess: (gain) => {
+                  setReward((prev) => ({
+                    xpGained: prev.xpGained + gain.xpGained,
+                    goalReached: prev.goalReached || gain.goalJustReached,
+                    streakIncreased: prev.streakIncreased || gain.streakIncreased,
+                    streak: gain.status.streak,
+                    goalMet: gain.status.goalMet,
+                  }));
+                },
+              },
+            );
+          }
+        },
+      },
     );
-  }, [current, draft, submit, result, assisted]);
+  }, [current, draft, submit, result, assisted, increment]);
 
   const advance = useCallback(() => {
     if (current === null || result === null) {
@@ -101,7 +135,7 @@ export function LessonSession({ lessonId }: { lessonId: string }): ReactElement 
   }
 
   if (current === null) {
-    return <LessonComplete title={lesson.data.title} />;
+    return <LessonComplete title={lesson.data.title} reward={reward} />;
   }
 
   const locked = result !== null;
