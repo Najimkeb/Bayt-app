@@ -56,6 +56,23 @@ export class D1DocumentRepository implements DocumentRepository {
       await this.db.insert(learningItems).values([...items]);
     }
   }
+
+  public async listLearningItems(sourceRef: string): Promise<readonly LearningItemRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(learningItems)
+      .where(eq(learningItems.sourceRef, sourceRef))
+      .orderBy(learningItems.createdAt);
+
+    return rows.map((row) => ({
+      id: row.id,
+      type: 'flashcard',
+      front: row.front,
+      back: row.back,
+      sourceRef: row.sourceRef ?? sourceRef,
+      createdAt: row.createdAt,
+    }));
+  }
 }
 
 function toRecord(row: DocumentRow): DocumentRecord {

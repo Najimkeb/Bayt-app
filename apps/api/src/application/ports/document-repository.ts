@@ -21,4 +21,7 @@ export interface DocumentRepository {
 
   /** Remplace les cartes d'une source (réingestion idempotente). */
   replaceLearningItems(sourceRef: string, items: readonly LearningItemRecord[]): Promise<void>;
+
+  /** Cartes générées pour une source, dans l'ordre de génération. Lecture seule. */
+  listLearningItems(sourceRef: string): Promise<readonly LearningItemRecord[]>;
 }

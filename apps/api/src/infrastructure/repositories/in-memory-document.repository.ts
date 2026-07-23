@@ -51,6 +51,10 @@ export class InMemoryDocumentRepository implements DocumentRepository {
     return Promise.resolve();
   }
 
+  public listLearningItems(sourceRef: string): Promise<readonly LearningItemRecord[]> {
+    return Promise.resolve(this.itemsForSource(sourceRef));
+  }
+
   /** Cartes générées pour une source, pour les assertions de test. */
   public itemsForSource(sourceRef: string): readonly LearningItemRecord[] {
     return this.#itemsBySource.get(sourceRef) ?? [];

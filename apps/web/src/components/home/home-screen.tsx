@@ -1,6 +1,7 @@
 'use client';
 
-import { Mascot } from '@bayt/ui';
+import { Mascot, Surface } from '@bayt/ui';
+import Link from 'next/link';
 import type { ReactElement } from 'react';
 
 import { DEMO_USER_ID } from '@/lib/api/client';
@@ -30,6 +31,8 @@ export function HomeScreen(): ReactElement {
       <WelcomeMascot dueCount={dueCount} goalMet={goalMet} loading={queue.isPending} />
 
       <ReviewCard />
+
+      <LibraryLink />
 
       {path.isError ? (
         <PathError onRetry={() => void path.refetch()} />
@@ -69,6 +72,31 @@ function WelcomeMascot({
       <Mascot mood={goalMet ? 'celebrating' : 'idle'} size="md" priority />
       <p className="text-base font-bold leading-relaxed text-muted-foreground">{message}</p>
     </div>
+  );
+}
+
+/** Accès à la bibliothèque : déposer un document pour générer des cartes. */
+function LibraryLink(): ReactElement {
+  return (
+    <Link
+      href="/library"
+      className="rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+    >
+      <Surface className="flex items-center gap-4 p-5 transition-colors hover:bg-surface-hover">
+        <span aria-hidden="true" className="text-3xl">
+          📚
+        </span>
+        <div className="flex min-w-0 flex-col">
+          <p className="text-lg font-extrabold">Bibliothèque</p>
+          <p className="text-sm font-bold text-muted-foreground">
+            Dépose un document — j&apos;en fais des cartes à réviser.
+          </p>
+        </div>
+        <span aria-hidden="true" className="ml-auto text-lg text-muted-foreground">
+          ›
+        </span>
+      </Surface>
+    </Link>
   );
 }
 

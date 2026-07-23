@@ -1,3 +1,4 @@
+import type { DocumentCards, DocumentDto, DocumentList } from './document-types';
 import type { AnswerResult, ExerciseAnswer, Lesson } from './lesson-types';
 import type { LearningPath } from './path-types';
 import type { DailyStatus, IncrementResult, XpEvent } from './progress-types';
@@ -116,6 +117,54 @@ export function incrementProgress(input: {
     method: 'POST',
     body: JSON.stringify(input),
   });
+}
+
+/**
+ * Dépose un document à ingérer.
+ *
+ * Envoi en `multipart/form-data` : on ne passe **pas** par `request`, qui force
+ * un `Content-Type: application/json`. Ici on laisse le navigateur poser le
+ * `Content-Type` et sa frontière (boundary) multipart lui-même.
+ */
+export async function uploadDocument(userId: string, file: File): Promise<DocumentDto> {
+  const form = new FormData();
+  form.set('file', file);
+  form.set('userId', userId);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}/documents`, { method: 'POST', body: form });
+  } catch {
+    throw new ApiError(0, `L'API BAYT est injoignable sur ${API_URL}.`);
+  }
+
+  if (!response.ok) {
+    // 415 = format non pris en charge : on remonte le motif de l'API si présent.
+    let detail: string | undefined;
+    try {
+      detail = ((await response.json()) as { detail?: string }).detail;
+    } catch {
+      detail = undefined;
+    }
+    throw new ApiError(response.status, detail ?? `L'API a repondu ${String(response.status)}.`);
+  }
+
+  return (await response.json()) as DocumentDto;
+}
+
+/** Documents de l'apprenant, du plus récent au plus ancien. */
+export function fetchDocuments(userId: string): Promise<DocumentList> {
+  return request<DocumentList>(`/documents?userId=${encodeURIComponent(userId)}`);
+}
+
+/** Statut de traitement d'un document précis (utilisé par le polling). */
+export function fetchDocument(id: string): Promise<DocumentDto> {
+  return request<DocumentDto>(`/documents/${encodeURIComponent(id)}`);
+}
+
+/** Cartes générées (recto/verso) d'un document. */
+export function fetchDocumentCards(id: string): Promise<DocumentCards> {
+  return request<DocumentCards>(`/documents/${encodeURIComponent(id)}/cards`);
 }
 
 /** Chemin de progression : unités, leçons et leur état. */

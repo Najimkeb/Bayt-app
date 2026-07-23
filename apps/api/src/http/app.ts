@@ -17,7 +17,7 @@ import type { ReviewRepository } from '../application/ports/review-repository.js
 import { CompleteLesson } from '../application/use-cases/complete-lesson.js';
 import { SubmitDocument } from '../application/use-cases/submit-document.js';
 import { UnsupportedFormatError } from '../ingestion/format.js';
-import { presentDocument } from './document-dto.js';
+import { presentDocument, presentDocumentCard } from './document-dto.js';
 import { GetDueQueue } from '../application/use-cases/get-due-queue.js';
 import { GetLesson } from '../application/use-cases/get-lesson.js';
 import { GetPath } from '../application/use-cases/get-path.js';
@@ -376,6 +376,25 @@ export function createApp({
       }
 
       return context.json(presentDocument(document));
+    });
+
+    /**
+     * Cartes générées par un document (recto/verso) — pour l'aperçu.
+     *
+     * Lecture seule : montrer le produit fini de l'ingestion. Sans lien avec
+     * l'API de leçon, qui masque volontairement les solutions.
+     */
+    app.get('/documents/:id/cards', async (context) => {
+      const id = context.req.param('id');
+      const document = await documentRepository.findById(id);
+
+      if (document === null) {
+        return context.json({ error: 'document_not_found' }, 404);
+      }
+
+      const cards = await documentRepository.listLearningItems(`doc:${id}`);
+
+      return context.json({ documentId: id, cards: cards.map(presentDocumentCard) });
     });
   }
 

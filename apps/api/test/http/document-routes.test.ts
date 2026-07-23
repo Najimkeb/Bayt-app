@@ -85,6 +85,32 @@ describe('GET /documents et /documents/:id', () => {
   });
 });
 
+describe('GET /documents/:id/cards', () => {
+  it('renvoie les cartes générées (recto/verso) du document', async () => {
+    const created = (await (await upload('a.md', 'text/markdown', '# Cours')).json()) as {
+      id: string;
+    };
+
+    // Simule ce que le consumer écrit après traitement.
+    await docs.replaceLearningItems(`doc:${created.id}`, [
+      { id: 'c1', type: 'flashcard', front: 'Q1', back: 'R1', sourceRef: `doc:${created.id}`, createdAt: 1 },
+      { id: 'c2', type: 'flashcard', front: 'Q2', back: 'R2', sourceRef: `doc:${created.id}`, createdAt: 2 },
+    ]);
+
+    const response = await app.request(`/documents/${created.id}/cards`);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { cards: { front: string; back: string }[] };
+    expect(body.cards).toEqual([
+      { id: 'c1', front: 'Q1', back: 'R1' },
+      { id: 'c2', front: 'Q2', back: 'R2' },
+    ]);
+  });
+
+  it('renvoie 404 pour un document inconnu', async () => {
+    expect((await app.request('/documents/inconnu/cards')).status).toBe(404);
+  });
+});
+
 describe('sans dépendances d\'ingestion', () => {
   it('ne monte pas les routes /documents', async () => {
     const bare = createApp({
