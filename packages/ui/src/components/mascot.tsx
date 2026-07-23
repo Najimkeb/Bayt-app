@@ -77,8 +77,9 @@ export function resolvePose(mood: MascotMood): MascotPose {
 /**
  * La mascotte BAYT, en illustration.
  *
- * Affichee dans un medaillon rond : les illustrations sont fournies sur fond
- * clair, le cadre les integre proprement en theme clair comme sombre.
+ * Aucun cadre ni fond ajoute : la mascotte est simplement posee, detouree. Les
+ * illustrations doivent donc etre fournies en PNG a fond transparent — sans
+ * quoi un carre opaque apparait (visible surtout en Dark Mode).
  */
 export function Mascot({
   mood = 'idle',
@@ -94,11 +95,7 @@ export function Mascot({
     <motion.div
       // La cle relance l'animation a chaque changement de pose reellement visible.
       key={pose.src}
-      className={cn(
-        'relative shrink-0 overflow-hidden rounded-full border border-border bg-white',
-        'shadow-[0_1px_2px_rgba(28,25,23,0.06),0_10px_24px_-12px_rgba(28,25,23,0.25)]',
-        className,
-      )}
+      className={cn('relative shrink-0', className)}
       style={{ width: pixels, height: pixels }}
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.86 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -116,7 +113,7 @@ export function Mascot({
         priority={priority}
         // `contain` : la mascotte est illustree en pied, un recadrage lui
         // couperait la queue et les pattes.
-        className="size-full scale-105 object-contain"
+        className="size-full object-contain"
       />
     </motion.div>
   );

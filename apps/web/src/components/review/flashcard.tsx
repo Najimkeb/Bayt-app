@@ -6,6 +6,8 @@ import type { ReactElement } from 'react';
 
 import type { DueCard } from '@/lib/api/types';
 
+import { CardBack, CardFront } from './card-content';
+
 /**
  * La carte de révision, avec son retournement.
  *
@@ -24,13 +26,14 @@ export function Flashcard({
 }): ReactElement {
   const reduceMotion = useReducedMotion();
 
-  const face = 'flip-face absolute inset-0 flex flex-col items-center justify-center gap-5 p-8';
+  const face =
+    'flip-face absolute inset-0 flex flex-col items-center justify-center gap-4 p-5 sm:gap-5 sm:p-8';
 
   return (
     <div className="flip-scene w-full">
       <motion.div
         className="relative w-full"
-        style={{ transformStyle: 'preserve-3d', minHeight: 'clamp(20rem, 44vh, 26rem)' }}
+        style={{ transformStyle: 'preserve-3d', minHeight: 'clamp(17rem, 46vh, 24rem)' }}
         initial={false}
         animate={reduceMotion ? { opacity: 1 } : { rotateY: revealed ? 180 : 0 }}
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
@@ -53,16 +56,14 @@ export function Flashcard({
         >
           <CardKind type={card.item.type} label="Question" />
 
-          <p className="text-balance text-center text-3xl font-extrabold leading-snug sm:text-4xl">
-            {card.item.front}
-          </p>
+          <CardFront card={card} />
 
           {!revealed && (
             <button
               type="button"
               onClick={onReveal}
               aria-keyshortcuts="Space"
-              className="absolute inset-0 size-full cursor-pointer rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="absolute inset-0 size-full cursor-pointer touch-manipulation rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <span className="sr-only">{"Révéler la réponse (barre d'espace)"}</span>
             </button>
@@ -80,13 +81,7 @@ export function Flashcard({
         >
           <CardKind type={card.item.type} label="Réponse" />
 
-          <p className="text-balance text-center text-3xl font-extrabold leading-snug sm:text-4xl">
-            {card.item.back}
-          </p>
-
-          <p className="text-center text-base font-bold text-muted-foreground">
-            {card.item.front}
-          </p>
+          <CardBack card={card} />
         </Surface>
       </motion.div>
     </div>
@@ -99,7 +94,7 @@ function CardKind({ type, label }: { type: DueCard['item']['type']; label: strin
     type === 'cloze' ? 'Texte à trous' : type === 'practice_case' ? 'Cas pratique' : 'Flashcard';
 
   return (
-    <span className="absolute left-1/2 top-6 -translate-x-1/2 text-xs font-extrabold uppercase tracking-[0.14em] text-muted-foreground">
+    <span className="absolute left-1/2 top-4 -translate-x-1/2 whitespace-nowrap text-[0.7rem] font-extrabold uppercase tracking-[0.14em] text-muted-foreground sm:top-6 sm:text-xs">
       {label} · {kind}
     </span>
   );

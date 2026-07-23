@@ -158,7 +158,7 @@ export function ReviewSession(): ReactElement {
   }
 
   return (
-    <div className="flex w-full max-w-2xl flex-col gap-7">
+    <div className="flex w-full max-w-2xl flex-col gap-5 sm:gap-7">
       {/* Flash de feedback coloré — décoratif, l'info reste portée par aria-live. */}
       {flash !== null && (
         <div
@@ -183,6 +183,9 @@ export function ReviewSession(): ReactElement {
         </motion.div>
       </AnimatePresence>
 
+      <MascotPanel mood={mood} grade={lastGrade} revealed={revealed} />
+
+      {/* Zone d'action, ancrée en bas — la plus accessible au pouce sur mobile. */}
       <div className="min-h-[7.75rem]">
         {revealed ? (
           <GradeButtons
@@ -196,11 +199,11 @@ export function ReviewSession(): ReactElement {
               size="lg"
               onClick={reveal}
               aria-keyshortcuts="Space"
-              className="w-full sm:w-auto"
+              className="w-full touch-manipulation sm:w-auto"
             >
               Révéler la réponse
             </Button>
-            <p className="text-sm font-bold text-muted-foreground">
+            <p className="text-center text-sm font-bold text-muted-foreground">
               Astuce : <kbd className="font-extrabold">Espace</kbd> pour révéler, puis{' '}
               <kbd className="font-extrabold">1</kbd> à <kbd className="font-extrabold">4</kbd> pour
               noter.
@@ -208,8 +211,6 @@ export function ReviewSession(): ReactElement {
           </div>
         )}
       </div>
-
-      <MascotPanel mood={mood} grade={lastGrade} revealed={revealed} />
 
       {/* Annonces pour les lecteurs d'écran, sans perturber l'affichage. */}
       <p aria-live="polite" className="sr-only">

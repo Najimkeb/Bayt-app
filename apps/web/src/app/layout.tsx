@@ -40,7 +40,7 @@ export default function RootLayout({ children }: { children: ReactNode }): React
         {/* Applique le thème avant la peinture : aucun flash au chargement. */}
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="min-h-dvh antialiased">
+      <body className="min-h-dvh overflow-x-hidden antialiased">
         <Providers>
           {/* Lien d'évitement — premier arrêt de la navigation clavier. */}
           <a
@@ -51,10 +51,10 @@ export default function RootLayout({ children }: { children: ReactNode }): React
           </a>
 
           <div className="flex min-h-dvh flex-col">
-            <header className="flex items-center justify-between px-5 py-4 sm:px-8">
-              <span className="text-lg font-extrabold tracking-tight">
-                BAYT
-                <span className="ml-2 align-middle text-xs font-bold text-muted-foreground">
+            <header className="flex items-center justify-between gap-3 px-4 py-3.5 sm:px-8 sm:py-5">
+              <span className="flex min-w-0 items-baseline gap-2 truncate">
+                <span className="text-xl font-black tracking-tight sm:text-2xl">BAYT</span>
+                <span className="hidden truncate text-xs font-bold text-muted-foreground sm:inline">
                   apprendre pour de bon
                 </span>
               </span>
@@ -63,7 +63,7 @@ export default function RootLayout({ children }: { children: ReactNode }): React
 
             <main
               id="contenu"
-              className="flex flex-1 flex-col items-center justify-center px-5 pb-16 sm:px-8"
+              className="flex flex-1 flex-col items-center justify-center px-4 pb-12 pt-2 sm:px-8 sm:pb-16"
             >
               {children}
             </main>

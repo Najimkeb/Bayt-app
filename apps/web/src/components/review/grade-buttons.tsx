@@ -90,7 +90,7 @@ export function GradeButtons({
                 ? `${label} — ${hint}`
                 : `${label} — ${hint}, prochaine révision dans ${formatIntervalLong(outcome.intervalMs)}`
             }
-            className="pressable flex min-h-[4.75rem] flex-col items-center justify-center gap-0.5 rounded-[var(--radius-button)] px-2 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="pressable flex min-h-[3.25rem] touch-manipulation flex-col items-center justify-center gap-0.5 rounded-[var(--radius-button)] px-2 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             style={
               {
                 '--btn-bg': bg,

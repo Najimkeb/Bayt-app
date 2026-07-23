@@ -57,5 +57,11 @@ Palette Duolingo (vert #58CC02 / rouge #FF4B4B / bleu #1CB0F6 / jaune #FFC800, c
 **L018 — Grade → couleur : Again rouge, Hard jaune, Good vert, Easy bleu.**
 Mapping fixe des 4 boutons de notation. Feedback : flash vert sur Good/Easy, rouge sur Again/Hard (overlay décoratif `aria-hidden`, l'info reste portée par `aria-live` + la mascotte). La couleur n'est jamais le seul indice — libellé, raccourci clavier et intervalle restent lisibles (WCAG 1.4.1).
 
+**L019 — La syntaxe cloze brute ne doit jamais atteindre l'écran.**
+`{{c1::réponse}}` / `{{c1::réponse::indice}}` sont analysés par `parseCloze` (`apps/web/src/lib/cloze.ts`, testé) — jamais inline dans le composant. Recto = blanc/pastille (indice si présent), verso = réponse en vert gras. Piège : une regex `/…/g` **partagée** garde son `lastIndex` entre `.test()` et `.matchAll()` → analyse corrompue. Fabriquer une regex fraîche à chaque appel.
+
+**L020 — Les PNG de la mascotte doivent être à fond transparent (alpha réel).**
+`apps/web/public/mascot/{idle,celebrating}.png` sont actuellement **opaques** (PNG color type 2, RGB sans canal alpha) → carré blanc visible, surtout en Dark Mode. Le composant `Mascot` n'ajoute plus ni fond ni cadre : il faut fournir de vrais PNG détourés (RGBA). Ne pas retoucher les images soi-même sans le dire. Vérif rapide : `sips -g hasAlpha fichier.png`.
+
 **L005 — Convention de cette mémoire.**
 Une leçon = une entrée courte et actionnable. Noter le nouveau et le confirmé, pas le déjà-écrit. Mettre à jour une leçon plutôt que la dupliquer.

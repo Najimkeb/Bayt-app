@@ -164,6 +164,40 @@ describe('Ecran de revision', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('injoignable');
   });
+
+  it('n\'affiche jamais la syntaxe cloze brute', async () => {
+    const base = card('item-cloze', 'La courbe de {{c1::Ebbinghaus}} est nette', 'Ebbinghaus');
+    const cloze = { ...base, item: { ...base.item, type: 'cloze' as const } };
+    fetchDueQueue.mockResolvedValue({ now: QUEUE.now, count: 1, cards: [cloze] });
+    const user = userEvent.setup();
+    renderSession();
+
+    const front = await questionText();
+    expect(front.textContent).not.toContain('{{');
+    expect(front.textContent).toContain('La courbe de');
+
+    await user.click(screen.getByRole('button', { name: 'Révéler la réponse' }));
+    const back = await screen.findByRole('group', { name: 'Réponse' });
+    expect(back.textContent).not.toContain('{{');
+    expect(back.textContent).toContain('Ebbinghaus');
+  });
+
+  it('remplit la barre de progression au fil des notes', async () => {
+    const user = userEvent.setup();
+    renderSession();
+
+    await questionText();
+    const bar = screen.getByRole('progressbar');
+    expect(bar).toHaveAttribute('aria-valuenow', '0');
+
+    await user.click(screen.getByRole('button', { name: 'Révéler la réponse' }));
+    await user.click(await screen.findByRole('button', { name: /Correct/ }));
+
+    // 1 carte notée sur 2 → 50 %.
+    await waitFor(() => {
+      expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50');
+    });
+  });
 });
 
 describe('Accessibilite clavier', () => {
