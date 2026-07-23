@@ -106,17 +106,20 @@ export function Mascot({
           : { type: 'spring', stiffness: 420, damping: 16, mass: 0.7 }
       }
     >
+      {/*
+        Pattern next/image `fill` : l'image remplit la boite carree parente
+        (position relative) et `objectFit: contain` la contient sans jamais la
+        deformer ni la recadrer. Le fit est pose en style inline, pas via une
+        classe Tailwind (`object-contain` vient de ce paquet et n'est pas
+        toujours regeneree par l'app consommatrice).
+      */}
       <Image
         src={pose.src}
         alt={pose.alt}
-        width={pixels}
-        height={pixels}
+        fill
+        sizes={`${String(pixels)}px`}
         priority={priority}
-        // `objectFit: contain` posé en style inline (et non via une classe
-        // Tailwind) : la classe `object-contain` vient de ce paquet et n'est pas
-        // toujours regeneree par l'app consommatrice. En inline, le ratio est
-        // garanti — la mascotte n'est jamais etiree, jamais recadree.
-        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+        style={{ objectFit: 'contain' }}
       />
     </motion.div>
   );
