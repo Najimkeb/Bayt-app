@@ -44,10 +44,13 @@
     ]
   },
 
-  // Workers AI (optionnel) : décommenter pour brancher le vrai générateur.
-  // Sans ce binding, l'ingestion utilise un générateur heuristique local, hors
-  // ligne, sans compte Cloudflare.
-  // "ai": { "binding": "AI" },
+  // Workers AI : branche le vrai générateur de cartes (agent LLM).
+  // Le binding `AI` expose les modèles Workers AI sur l'infra Cloudflare (aucune
+  // clé externe). En `wrangler dev`, les appels sont relayés vers Workers AI en
+  // remote : il faut donc être authentifié (`wrangler login`).
+  // Retirer ce binding fait retomber l'ingestion sur le générateur heuristique
+  // local (hors ligne) — le repli reste fonctionnel (cf. src/index.ts).
+  "ai": { "binding": "AI" },
 
   "observability": {
     "enabled": true

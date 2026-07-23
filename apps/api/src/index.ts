@@ -29,9 +29,27 @@ export interface Env {
   readonly AI?: WorkersAiBinding;
 }
 
-/** Choisit le fournisseur LLM : Workers AI si disponible, sinon heuristique local. */
+/**
+ * Choisit le fournisseur LLM : Workers AI si le binding existe, sinon le repli
+ * heuristique local.
+ *
+ * Journalise QUEL fournisseur est retenu, pour qu'on sache toujours si les
+ * cartes viennent d'une vraie IA (WorkersAI) ou du substitut de dev
+ * (Heuristic). Visible dans les logs `wrangler dev` / `wrangler tail`.
+ */
 function createProvider(env: Env): LLMProvider {
-  return env.AI ? new WorkersAiProvider(env.AI) : new HeuristicProvider();
+  if (env.AI) {
+    const provider = new WorkersAiProvider(env.AI);
+    console.log(`[ingestion] Provider LLM = WorkersAI · modèle ${provider.model}`);
+
+    return provider;
+  }
+
+  console.log(
+    '[ingestion] Provider LLM = Heuristic · binding AI absent → repli local (cartes NON issues d’une IA)',
+  );
+
+  return new HeuristicProvider();
 }
 
 /** Construit le consumer d'ingestion à partir des bindings. */
