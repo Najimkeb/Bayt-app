@@ -49,7 +49,7 @@ const SIZES = {
   /** En ligne, a cote d'un texte. */
   sm: 56,
   /** Panneau d'accompagnement pendant la revision. */
-  md: 104,
+  md: 120,
   /** Moment fort : fin de session. */
   lg: 208,
 } as const;
@@ -96,7 +96,8 @@ export function Mascot({
       // La cle relance l'animation a chaque changement de pose reellement visible.
       key={pose.src}
       className={cn('relative shrink-0', className)}
-      style={{ width: pixels, height: pixels }}
+      // Boite carree : aucune deformation possible du carre source.
+      style={{ width: pixels, height: pixels, aspectRatio: '1 / 1' }}
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.86 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={
@@ -111,9 +112,11 @@ export function Mascot({
         width={pixels}
         height={pixels}
         priority={priority}
-        // `contain` : la mascotte est illustree en pied, un recadrage lui
-        // couperait la queue et les pattes.
-        className="size-full object-contain"
+        // `objectFit: contain` posé en style inline (et non via une classe
+        // Tailwind) : la classe `object-contain` vient de ce paquet et n'est pas
+        // toujours regeneree par l'app consommatrice. En inline, le ratio est
+        // garanti — la mascotte n'est jamais etiree, jamais recadree.
+        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
       />
     </motion.div>
   );
