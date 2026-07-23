@@ -81,5 +81,11 @@ XP / série / objectif quotidien vivent dans `packages/domain/src/gamification/`
 **L026 — Pas de cœurs ni de vies (rappel, appliqué à la gamification).**
 On récompense l'effort (XP, flamme, objectif), on ne punit jamais l'erreur par une « vie » perdue. Célébrations spéciales quand l'objectif du jour est atteint et quand la série augmente.
 
+**L027 — Accueil = carte « Réviser » + chemin à nœuds (route `/`).**
+`/` est le point d'entrée (plus de redirect). Une **unité** (`units`) groupe des leçons ordonnées (`lessons.unit_id`/`position`) ; la complétion est persistée dans `lesson_progress` (`GET /path`, `POST /lessons/:id/complete`, zod). États des nœuds calculés purement (`assignNodeStates`, testé) : terminé / **une seule** disponible (la 1re non terminée) / verrouillé. Une leçon terminée débloque la suivante — la complétion est écrite à la fin de la leçon (`useCompleteLesson`).
+
+**L028 — Serpentin : décalage horizontal + colonne centrale, pas de trig fragile.**
+Nœuds empilés, décalés en `translateX` selon `index % 4` (centre/droite/centre/gauche) au-dessus d'une colonne centrale (le « chemin »). Robuste et responsive, sans connecteurs à angle calculé. Nœud disponible = pulsation (Framer Motion, coupée en `reduced-motion`) + badge « COMMENCER » ; verrouillé = non cliquable ; état annoncé via `aria-label` + `aria-current="step"`.
+
 **L005 — Convention de cette mémoire.**
 Une leçon = une entrée courte et actionnable. Noter le nouveau et le confirmé, pas le déjà-écrit. Mettre à jour une leçon plutôt que la dupliquer.

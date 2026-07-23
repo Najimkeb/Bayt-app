@@ -18,6 +18,8 @@ vi.mock('@/lib/api/client', () => ({
     Promise.resolve({ xpToday: 0, dailyGoal: 50, goalMet: false, ratio: 0, streak: 0, longestStreak: 0, xpTotal: 0 }),
   incrementProgress: () =>
     Promise.resolve({ xpGained: 10, goalJustReached: false, streakIncreased: false, status: { xpToday: 10, dailyGoal: 50, goalMet: false, ratio: 0.2, streak: 0, longestStreak: 0, xpTotal: 10 } }),
+  fetchPath: () => Promise.resolve({ units: [] }),
+  markLessonComplete: () => Promise.resolve({ units: [] }),
 }));
 
 const { LessonSession } = await import('@/components/lesson/lesson-session');

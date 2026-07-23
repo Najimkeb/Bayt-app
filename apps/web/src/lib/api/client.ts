@@ -1,4 +1,5 @@
 import type { AnswerResult, ExerciseAnswer, Lesson } from './lesson-types';
+import type { LearningPath } from './path-types';
 import type { DailyStatus, IncrementResult, XpEvent } from './progress-types';
 import type { DueQueue, Preview, ReviewGrade, ReviewResult } from './types';
 
@@ -114,5 +115,18 @@ export function incrementProgress(input: {
   return request<IncrementResult>('/progress/increment', {
     method: 'POST',
     body: JSON.stringify(input),
+  });
+}
+
+/** Chemin de progression : unités, leçons et leur état. */
+export function fetchPath(userId: string): Promise<LearningPath> {
+  return request<LearningPath>(`/path?userId=${encodeURIComponent(userId)}`);
+}
+
+/** Marque une leçon terminée (débloque la suivante) ; renvoie le chemin à jour. */
+export function markLessonComplete(userId: string, lessonId: string): Promise<LearningPath> {
+  return request<LearningPath>(`/lessons/${encodeURIComponent(lessonId)}/complete`, {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
   });
 }

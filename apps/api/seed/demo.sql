@@ -22,8 +22,12 @@ INSERT OR REPLACE INTO learning_items (id, type, front, back, source_ref, create
   ('lx_item_5', 'flashcard', 'Termes FSRS ?',          'Stabilité, difficulté, rétrievabilité.','seed:lesson', 1767225600000),
   ('lx_item_6', 'flashcard', 'Services Cloudflare ?',  'D1, R2, KV.',                          'seed:lesson', 1767225600000);
 
-INSERT OR REPLACE INTO lessons (id, title, created_at) VALUES
-  ('lesson_demo', 'Fondamentaux de la mémorisation', 1767225600000);
+-- Unité du chemin de progression (accueil).
+INSERT OR REPLACE INTO units (id, title, color, position, created_at) VALUES
+  ('unit_fondamentaux', 'Fondamentaux de la mémorisation', 'green', 0, 1767225600000);
+
+INSERT OR REPLACE INTO lessons (id, title, unit_id, position, created_at) VALUES
+  ('lesson_demo', 'Les bases', 'unit_fondamentaux', 0, 1767225600000);
 
 INSERT OR REPLACE INTO exercises (id, lesson_id, item_id, position, type, prompt, payload) VALUES
   ('lx_1', 'lesson_demo', 'lx_item_1', 0, 'mcq',
@@ -49,3 +53,54 @@ INSERT OR REPLACE INTO exercises (id, lesson_id, item_id, position, type, prompt
   ('lx_6', 'lesson_demo', 'lx_item_6', 5, 'matching',
    'Associe chaque service Cloudflare à son rôle.',
    '{"pairs":[{"left":"D1","right":"Base de données SQL"},{"left":"R2","right":"Stockage d''objets"},{"left":"KV","right":"Cache clé-valeur"}]}');
+
+-- ============================================================================
+-- Leçons supplémentaires de l'unité (verrouillées au départ, débloquées à la suite).
+-- ============================================================================
+
+INSERT OR REPLACE INTO learning_items (id, type, front, back, source_ref, created_at) VALUES
+  ('lx_item_7',  'flashcard', 'Répétition espacée ?',   'Revoir à intervalles croissants.',     'seed:lesson', 1767225600000),
+  ('lx_item_8',  'flashcard', 'Feynman ?',              'Expliquer simplement pour comprendre.', 'seed:lesson', 1767225600000),
+  ('lx_item_9',  'flashcard', 'Interrogation de rappel ?','Se tester plutôt que relire.',       'seed:lesson', 1767225600000),
+  ('lx_item_10', 'flashcard', 'Taxonomie de Bloom ?',   'Niveaux de maîtrise cognitive.',       'seed:lesson', 1767225600000),
+  ('lx_item_11', 'flashcard', 'Surapprentissage ?',     'Continuer après la première réussite.', 'seed:lesson', 1767225600000),
+  ('lx_item_12', 'flashcard', 'Effet de test ?',        'Se tester renforce la mémoire.',        'seed:lesson', 1767225600000);
+
+INSERT OR REPLACE INTO lessons (id, title, unit_id, position, created_at) VALUES
+  ('lesson_srs',      'Répétition espacée', 'unit_fondamentaux', 1, 1767225600000),
+  ('lesson_pratique', 'Pratique de rappel', 'unit_fondamentaux', 2, 1767225600000),
+  ('lesson_maitrise', 'Vers la maîtrise',   'unit_fondamentaux', 3, 1767225600000);
+
+INSERT OR REPLACE INTO exercises (id, lesson_id, item_id, position, type, prompt, payload) VALUES
+  -- Leçon 2 : Répétition espacée
+  ('sr_1', 'lesson_srs', 'lx_item_7', 0, 'mcq',
+   'Qu''est-ce que la répétition espacée ?',
+   '{"options":["Tout revoir chaque jour","Revoir à intervalles croissants","Ne jamais revoir","Revoir au hasard"],"answerIndex":1}'),
+  ('sr_2', 'lesson_srs', 'lx_item_1', 1, 'fill_blank',
+   'Se tester de mémoire plutôt que relire s''appelle l''active ______.',
+   '{"answer":"recall","accept":["rappel"]}'),
+  ('sr_3', 'lesson_srs', 'lx_item_9', 2, 'matching',
+   'Associe chaque principe à sa description.',
+   '{"pairs":[{"left":"Répétition espacée","right":"Intervalles croissants"},{"left":"Effet de test","right":"Se tester renforce la mémoire"}]}'),
+
+  -- Leçon 3 : Pratique de rappel
+  ('pr_1', 'lesson_pratique', 'lx_item_8', 0, 'mcq',
+   'Que propose la technique de Feynman ?',
+   '{"options":["Mémoriser par cœur","Expliquer simplement pour comprendre","Lire vite","Copier ses notes"],"answerIndex":1}'),
+  ('pr_2', 'lesson_pratique', 'lx_item_12', 1, 'fill_blank',
+   'Le fait que se tester renforce la mémoire s''appelle l''effet de ______.',
+   '{"answer":"test","accept":["testing"]}'),
+  ('pr_3', 'lesson_pratique', 'lx_item_9', 2, 'mcq',
+   'L''interrogation de rappel consiste à…',
+   '{"options":["Relire ses notes","Se tester de mémoire","Écouter un podcast","Surligner"],"answerIndex":1}'),
+
+  -- Leçon 4 : Vers la maîtrise
+  ('ma_1', 'lesson_maitrise', 'lx_item_10', 0, 'mcq',
+   'À quoi sert la taxonomie de Bloom ?',
+   '{"options":["Classer les niveaux de maîtrise","Ranger des livres","Mesurer le temps","Noter la vitesse"],"answerIndex":0}'),
+  ('ma_2', 'lesson_maitrise', 'lx_item_11', 1, 'fill_blank',
+   'Continuer à réviser après la première réussite s''appelle le sur______.',
+   '{"answer":"apprentissage","accept":["surapprentissage"]}'),
+  ('ma_3', 'lesson_maitrise', 'lx_item_5', 2, 'matching',
+   'Associe chaque terme FSRS à sa définition.',
+   '{"pairs":[{"left":"Stabilité","right":"Durée avant oubli"},{"left":"Difficulté","right":"Résistance à la mémorisation"},{"left":"Rétrievabilité","right":"Probabilité de rappel"}]}');

@@ -2,11 +2,12 @@
 
 import { Button, Mascot, ProgressBar, Surface, type MascotMood } from '@bayt/ui';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { useCallback, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 
 import { DEMO_USER_ID } from '@/lib/api/client';
 import { useLesson, useSubmitAnswer } from '@/lib/api/lesson-queries';
 import type { AnswerResult, ExerciseAnswer, PresentedExercise } from '@/lib/api/lesson-types';
+import { useCompleteLesson } from '@/lib/api/path-queries';
 import { useIncrementProgress } from '@/lib/api/progress-queries';
 import type { XpRewardData } from '@/components/progress/xp-reward';
 
@@ -32,6 +33,7 @@ export function LessonSession({ lessonId }: { lessonId: string }): ReactElement 
   const lesson = useLesson(lessonId);
   const submit = useSubmitAnswer(lessonId, userId);
   const increment = useIncrementProgress(userId);
+  const complete = useCompleteLesson(userId);
 
   /** File des exercices restants (par id), dans l'ordre à jouer. */
   const [queue, setQueue] = useState<string[] | null>(null);
@@ -63,6 +65,21 @@ export function LessonSession({ lessonId }: { lessonId: string }): ReactElement 
     const id = activeQueue[0];
     return exercises?.find((exercise) => exercise.id === id) ?? null;
   }, [activeQueue, exercises]);
+
+  // Leçon terminée (file vidée) : on la marque complète une seule fois, ce qui
+  // débloque la suivante sur le chemin de l'accueil.
+  const completionFired = useRef(false);
+  useEffect(() => {
+    if (
+      !completionFired.current &&
+      exercises !== undefined &&
+      exercises.length > 0 &&
+      current === null
+    ) {
+      completionFired.current = true;
+      complete.mutate(lessonId);
+    }
+  }, [current, exercises, complete, lessonId]);
 
   const check = useCallback(() => {
     if (current === null || draft === null || submit.isPending || result !== null) {

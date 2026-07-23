@@ -1,6 +1,11 @@
-import { redirect } from 'next/navigation';
+import type { ReactElement } from 'react';
 
-/** L'unique parcours livre pour l'instant est la revision. */
-export default function HomePage(): never {
-  redirect('/review');
+import { HomeScreen } from '@/components/home/home-screen';
+
+/**
+ * Accueil de BAYT — point d'entrée de l'app : carte « Réviser » + chemin de
+ * progression à nœuds.
+ */
+export default function HomePage(): ReactElement {
+  return <HomeScreen />;
 }

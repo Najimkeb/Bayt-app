@@ -109,11 +109,48 @@ export const reviewLogs = sqliteTable(
  * Contexte « Leçon » — au-dessus de la boucle FSRS, sans progression parallèle :
  * chaque exercice révise un `learning_item` et produit une note de révision.
  */
+/**
+ * Une unité : un groupe ordonné de leçons, avec un bandeau titre coloré.
+ *
+ * Contexte « Content Catalog » — structure le chemin de progression de l'accueil.
+ */
+export const units = sqliteTable('units', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  /** Couleur du bandeau (jeton : `green` | `blue` | `yellow` | `purple`). */
+  color: text('color').notNull(),
+  /** Rang de l'unité dans le chemin. */
+  position: integer('position').notNull(),
+  createdAt: integer('created_at').notNull(),
+});
+
 export const lessons = sqliteTable('lessons', {
   id: text('id').primaryKey(),
   title: text('title').notNull(),
+  /** Unité d'appartenance (chemin de progression), ou `null` si hors chemin. */
+  unitId: text('unit_id').references(() => units.id),
+  /** Rang de la leçon dans son unité. */
+  position: integer('position').notNull().default(0),
   createdAt: integer('created_at').notNull(),
 });
+
+/**
+ * Complétion des leçons par apprenant — **append-only** à la première réussite.
+ *
+ * Une leçon terminée débloque la suivante. L'absence de ligne = leçon non
+ * terminée.
+ */
+export const lessonProgress = sqliteTable(
+  'lesson_progress',
+  {
+    userId: text('user_id').notNull(),
+    lessonId: text('lesson_id')
+      .notNull()
+      .references(() => lessons.id),
+    completedAt: integer('completed_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.lessonId] })],
+);
 
 /**
  * Un exercice d'une leçon.
