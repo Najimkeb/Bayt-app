@@ -4,6 +4,7 @@ import type { ObjectStorage } from '../../application/ports/object-storage.js';
 export interface R2Like {
   put(key: string, value: ArrayBuffer, options?: unknown): Promise<unknown>;
   get(key: string): Promise<{ arrayBuffer(): Promise<ArrayBuffer> } | null>;
+  delete(key: string): Promise<void>;
 }
 
 /** Stockage d'objets sur Cloudflare R2. */
@@ -23,6 +24,10 @@ export class R2ObjectStorage implements ObjectStorage {
     }
 
     return new Uint8Array(await object.arrayBuffer());
+  }
+
+  public async delete(key: string): Promise<void> {
+    await this.bucket.delete(key);
   }
 }
 

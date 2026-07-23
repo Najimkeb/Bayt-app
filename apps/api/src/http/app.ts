@@ -15,6 +15,7 @@ import type { PathRepository } from '../application/ports/path-repository.js';
 import type { ProgressRepository } from '../application/ports/progress-repository.js';
 import type { ReviewRepository } from '../application/ports/review-repository.js';
 import { CompleteLesson } from '../application/use-cases/complete-lesson.js';
+import { DeleteDocument } from '../application/use-cases/delete-document.js';
 import { SubmitDocument } from '../application/use-cases/submit-document.js';
 import { UnsupportedFormatError } from '../ingestion/format.js';
 import { presentDocument, presentDocumentCard } from './document-dto.js';
@@ -100,7 +101,7 @@ export function createApp({
     '*',
     cors({
       origin: [...allowedOrigins],
-      allowMethods: ['GET', 'POST', 'OPTIONS'],
+      allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
       allowHeaders: ['Content-Type'],
     }),
   );
@@ -318,6 +319,7 @@ export function createApp({
       ingestionQueue,
       clock,
     );
+    const deleteDocument = new DeleteDocument(documentRepository, objectStorage);
 
     /** Dépôt d'un document : stocké, mis en file, réponse immédiate (202). */
     app.post('/documents', async (context) => {
@@ -395,6 +397,20 @@ export function createApp({
       const cards = await documentRepository.listLearningItems(`doc:${id}`);
 
       return context.json({ documentId: id, cards: cards.map(presentDocumentCard) });
+    });
+
+    /**
+     * Supprime un document et ses cartes (fichier source R2 compris).
+     *
+     * Utile pour nettoyer les documents en échec sans réingérer. 204 si
+     * supprimé, 404 si déjà absent.
+     */
+    app.delete('/documents/:id', async (context) => {
+      const removed = await deleteDocument.execute(context.req.param('id'));
+
+      return removed
+        ? context.body(null, 204)
+        : context.json({ error: 'document_not_found' }, 404);
     });
   }
 

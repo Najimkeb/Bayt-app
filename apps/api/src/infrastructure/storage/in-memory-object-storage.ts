@@ -13,4 +13,10 @@ export class InMemoryObjectStorage implements ObjectStorage {
   public get(key: string): Promise<Uint8Array | null> {
     return Promise.resolve(this.#objects.get(key) ?? null);
   }
+
+  public delete(key: string): Promise<void> {
+    this.#objects.delete(key);
+
+    return Promise.resolve();
+  }
 }

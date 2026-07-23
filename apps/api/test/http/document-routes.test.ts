@@ -111,6 +111,28 @@ describe('GET /documents/:id/cards', () => {
   });
 });
 
+describe('DELETE /documents/:id', () => {
+  it('supprime le document et ses cartes (204)', async () => {
+    const created = (await (await upload('a.md', 'text/markdown', '# Cours')).json()) as {
+      id: string;
+    };
+    await docs.replaceLearningItems(`doc:${created.id}`, [
+      { id: 'c1', type: 'flashcard', front: 'Q', back: 'R', sourceRef: `doc:${created.id}`, createdAt: 1 },
+    ]);
+
+    const response = await app.request(`/documents/${created.id}`, { method: 'DELETE' });
+    expect(response.status).toBe(204);
+
+    // Document et cartes ont bien disparu.
+    expect((await app.request(`/documents/${created.id}`)).status).toBe(404);
+    expect(await docs.itemsForSource(`doc:${created.id}`)).toHaveLength(0);
+  });
+
+  it('renvoie 404 pour un document déjà absent', async () => {
+    expect((await app.request('/documents/inconnu', { method: 'DELETE' })).status).toBe(404);
+  });
+});
+
 describe('sans dépendances d\'ingestion', () => {
   it('ne monte pas les routes /documents', async () => {
     const bare = createApp({

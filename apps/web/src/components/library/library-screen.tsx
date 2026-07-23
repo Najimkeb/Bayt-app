@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type ReactElement } from 'react';
 
 import { DEMO_USER_ID } from '@/lib/api/client';
 import type { DocumentDto } from '@/lib/api/document-types';
-import { useDocuments, useUploadDocument } from '@/lib/api/document-queries';
+import { useDeleteDocument, useDocuments, useUploadDocument } from '@/lib/api/document-queries';
 
 import { CardPreviewLayer } from './card-preview';
 import { DocumentRow } from './document-row';
@@ -23,6 +23,7 @@ import { Dropzone } from './dropzone';
 export function LibraryScreen(): ReactElement {
   const documents = useDocuments(DEMO_USER_ID);
   const upload = useUploadDocument(DEMO_USER_ID);
+  const remove = useDeleteDocument(DEMO_USER_ID);
 
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<DocumentDto | null>(null);
@@ -104,7 +105,17 @@ export function LibraryScreen(): ReactElement {
       ) : (
         <ul className="flex flex-col gap-3">
           {list.map((document) => (
-            <DocumentRow key={document.id} document={document} onOpen={setSelected} />
+            <DocumentRow
+              key={document.id}
+              document={document}
+              onOpen={setSelected}
+              onDelete={(doc) => {
+                if (selected?.id === doc.id) {
+                  setSelected(null);
+                }
+                remove.mutate(doc.id);
+              }}
+            />
           ))}
         </ul>
       )}

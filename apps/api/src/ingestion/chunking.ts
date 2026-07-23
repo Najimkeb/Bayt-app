@@ -12,7 +12,9 @@ export interface ChunkOptions {
   readonly maxChars?: number;
 }
 
-const DEFAULT_MAX_CHARS = 1500;
+// ~1100 caractères/section : assez pour du contexte, assez court pour que la
+// sortie (≤ 6 cartes) tienne largement sous `max_tokens` sans troncature.
+const DEFAULT_MAX_CHARS = 1100;
 
 const isHeading = (paragraph: string): boolean => /^#{1,6}\s/.test(paragraph);
 

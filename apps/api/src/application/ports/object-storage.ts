@@ -6,4 +6,6 @@
 export interface ObjectStorage {
   put(key: string, bytes: Uint8Array, contentType?: string | null): Promise<void>;
   get(key: string): Promise<Uint8Array | null>;
+  /** Supprime l'objet ; ne lève pas si la clé n'existe pas. */
+  delete(key: string): Promise<void>;
 }

@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, inArray } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 
 import type {
@@ -6,9 +6,22 @@ import type {
   DocumentStatusPatch,
 } from '../../application/ports/document-repository.js';
 import type { DocumentRecord, LearningItemRecord } from '../../ingestion/document.js';
-import { documents, learningItems } from '../db/schema.js';
+import { documents, learningItems, reviewLogs, schedulingState } from '../db/schema.js';
 
 type DocumentRow = typeof documents.$inferSelect;
+
+/** Cartes par requête d'insert : 6 colonnes × 16 = 96 paramètres (< 100, limite D1). */
+const INSERT_CHUNK_SIZE = 16;
+
+/** Découpe un tableau en tranches de taille `size` (dernière tranche plus courte). */
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+
+  return chunks;
+}
 
 /** Implémentation D1 (via Drizzle) de la persistance des documents. */
 export class D1DocumentRepository implements DocumentRepository {
@@ -50,11 +63,36 @@ export class D1DocumentRepository implements DocumentRepository {
     sourceRef: string,
     items: readonly LearningItemRecord[],
   ): Promise<void> {
-    await this.db.delete(learningItems).where(eq(learningItems.sourceRef, sourceRef));
+    // D1 plafonne à 100 paramètres liés par requête. Une carte = 6 colonnes, donc
+    // 16 cartes/insert (96 paramètres) restent sous la limite. Sans ce
+    // découpage, un document produisant plus de 16 cartes échoue à l'insert
+    // (« too many SQL variables »). On regroupe la purge et les inserts dans un
+    // seul `batch` atomique : l'ancien lot n'est jamais supprimé sans le nouveau.
+    const inserts = chunk([...items], INSERT_CHUNK_SIZE).map((rows) =>
+      this.db.insert(learningItems).values(rows),
+    );
 
-    if (items.length > 0) {
-      await this.db.insert(learningItems).values([...items]);
-    }
+    await this.db.batch([
+      this.db.delete(learningItems).where(eq(learningItems.sourceRef, sourceRef)),
+      ...inserts,
+    ]);
+  }
+
+  public async delete(id: string, sourceRef: string): Promise<void> {
+    // Ids des cartes du document : sous-requête réutilisée pour purger leur
+    // état de révision avant de supprimer les cartes elles-mêmes (l'ordre
+    // respecte les dépendances entre tables).
+    const itemIds = this.db
+      .select({ id: learningItems.id })
+      .from(learningItems)
+      .where(eq(learningItems.sourceRef, sourceRef));
+
+    await this.db.batch([
+      this.db.delete(reviewLogs).where(inArray(reviewLogs.itemId, itemIds)),
+      this.db.delete(schedulingState).where(inArray(schedulingState.itemId, itemIds)),
+      this.db.delete(learningItems).where(eq(learningItems.sourceRef, sourceRef)),
+      this.db.delete(documents).where(eq(documents.id, id)),
+    ]);
   }
 
   public async listLearningItems(sourceRef: string): Promise<readonly LearningItemRecord[]> {

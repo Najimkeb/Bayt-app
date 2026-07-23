@@ -1,4 +1,4 @@
-import { CardParseError, parseCards, type GeneratedCard } from './card-schema.js';
+import { CARDS_JSON_SCHEMA, CardParseError, parseCards, type GeneratedCard } from './card-schema.js';
 import { dedupeCards } from './dedup.js';
 import type { LLMProvider } from './llm/provider.js';
 
@@ -52,8 +52,13 @@ export class CardGenerator {
 
   public constructor(provider: LLMProvider, options: CardGeneratorOptions = {}) {
     this.#provider = provider;
-    this.#maxCards = options.maxCardsPerSection ?? 8;
-    this.#maxAttempts = options.maxAttempts ?? 2;
+    // 6 cartes/section (au lieu de 8) : sortie plus courte, marge confortable
+    // sous `max_tokens` → aucune troncature. Mieux vaut des appels courts et
+    // sûrs que des réponses coupées (cf. découpage à ~1100 caractères).
+    this.#maxCards = options.maxCardsPerSection ?? 6;
+    // Plafond dur : 2 tentatives max par section. Chaque échec coûte des
+    // Neurons — on ne s'acharne pas.
+    this.#maxAttempts = Math.min(options.maxAttempts ?? 2, 2);
   }
 
   /**
@@ -72,6 +77,8 @@ export class CardGenerator {
         raw = await this.#provider.complete({
           system: SYSTEM_PROMPT,
           user: buildUser(section, this.#maxCards),
+          // JSON Mode : contraint la sortie à la structure des cartes.
+          schema: CARDS_JSON_SCHEMA,
         });
       } catch (error) {
         // Erreur du fournisseur (réseau, quota) : on retente puis on échoue.
@@ -84,6 +91,13 @@ export class CardGenerator {
       } catch (error) {
         if (error instanceof CardParseError) {
           lastError = error;
+          // Trace ciblée pour comprendre un échec, sans polluer : seulement en
+          // cas de sortie invalide, et seulement les 200 premiers caractères.
+          console.warn(
+            `[ingestion] sortie LLM non valide (tentative ${String(attempt)}/${String(
+              this.#maxAttempts,
+            )}) : ${JSON.stringify(raw.slice(0, 200))}`,
+          );
           continue;
         }
         throw error;

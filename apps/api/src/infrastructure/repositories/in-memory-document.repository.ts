@@ -51,6 +51,13 @@ export class InMemoryDocumentRepository implements DocumentRepository {
     return Promise.resolve();
   }
 
+  public delete(id: string, sourceRef: string): Promise<void> {
+    this.#docs.delete(id);
+    this.#itemsBySource.delete(sourceRef);
+
+    return Promise.resolve();
+  }
+
   public listLearningItems(sourceRef: string): Promise<readonly LearningItemRecord[]> {
     return Promise.resolve(this.itemsForSource(sourceRef));
   }

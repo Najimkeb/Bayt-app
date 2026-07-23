@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { fetchDocumentCards, fetchDocuments, uploadDocument } from './client';
+import { deleteDocument, fetchDocumentCards, fetchDocuments, uploadDocument } from './client';
 import type { DocumentCards, DocumentDto, DocumentList } from './document-types';
 import { isProcessing } from './document-types';
 
@@ -51,6 +51,44 @@ export function useUploadDocument(userId: string) {
       const documents = [created, ...(previous?.documents ?? []).filter((d) => d.id !== created.id)];
       queryClient.setQueryData<DocumentList>(key, { documents });
       void queryClient.invalidateQueries({ queryKey: key });
+    },
+  });
+}
+
+/**
+ * Supprime un document et ses cartes.
+ *
+ * Retrait optimiste de la liste : la ligne disparaît tout de suite, restaurée
+ * en cas d'échec. Utile pour nettoyer les documents en échec.
+ */
+export function useDeleteDocument(userId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, string, { previous: DocumentList | undefined }>({
+    mutationFn: (id) => deleteDocument(id),
+
+    onMutate: async (id) => {
+      const key = documentKeys.list(userId);
+      await queryClient.cancelQueries({ queryKey: key });
+
+      const previous = queryClient.getQueryData<DocumentList>(key);
+      if (previous !== undefined) {
+        queryClient.setQueryData<DocumentList>(key, {
+          documents: previous.documents.filter((doc) => doc.id !== id),
+        });
+      }
+
+      return { previous };
+    },
+
+    onError: (_error, _id, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(documentKeys.list(userId), context.previous);
+      }
+    },
+
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: documentKeys.list(userId) });
     },
   });
 }

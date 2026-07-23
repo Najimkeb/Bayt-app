@@ -24,4 +24,13 @@ export interface DocumentRepository {
 
   /** Cartes générées pour une source, dans l'ordre de génération. Lecture seule. */
   listLearningItems(sourceRef: string): Promise<readonly LearningItemRecord[]>;
+
+  /**
+   * Supprime un document et **toutes** ses cartes (et leur état de révision).
+   *
+   * `sourceRef` désigne les cartes du document (`doc:<id>`). Opération atomique
+   * côté persistance. Ne touche pas au fichier source (R2) : c'est le cas
+   * d'usage qui l'orchestre via `ObjectStorage`.
+   */
+  delete(id: string, sourceRef: string): Promise<void>;
 }

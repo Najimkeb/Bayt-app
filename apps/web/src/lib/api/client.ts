@@ -167,6 +167,25 @@ export function fetchDocumentCards(id: string): Promise<DocumentCards> {
   return request<DocumentCards>(`/documents/${encodeURIComponent(id)}/cards`);
 }
 
+/**
+ * Supprime un document et ses cartes.
+ *
+ * L'API répond 204 (sans corps) : on ne passe pas par `request`, qui essaie de
+ * parser du JSON.
+ */
+export async function deleteDocument(id: string): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}/documents/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  } catch {
+    throw new ApiError(0, `L'API BAYT est injoignable sur ${API_URL}.`);
+  }
+
+  if (!response.ok) {
+    throw new ApiError(response.status, `L'API a repondu ${String(response.status)}.`);
+  }
+}
+
 /** Chemin de progression : unités, leçons et leur état. */
 export function fetchPath(userId: string): Promise<LearningPath> {
   return request<LearningPath>(`/path?userId=${encodeURIComponent(userId)}`);

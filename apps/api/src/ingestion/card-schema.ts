@@ -17,6 +17,32 @@ export const generatedCardsSchema = z.object({
 
 export type GeneratedCard = z.infer<typeof generatedCardSchema>;
 
+/**
+ * Même contrat, exprimé en **JSON Schema** pour le JSON Mode de Workers AI.
+ *
+ * Passé à `env.AI.run` via `response_format` : le modèle est alors contraint à
+ * produire cette structure exacte (objet `{ cards: [{ front, back }] }`, `front`
+ * et `back` obligatoires). Miroir volontaire de `generatedCardsSchema` — la
+ * validation zod reste le juge final (Cloudflare ne garantit pas la conformité).
+ */
+export const CARDS_JSON_SCHEMA: Record<string, unknown> = {
+  type: 'object',
+  properties: {
+    cards: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          front: { type: 'string' },
+          back: { type: 'string' },
+        },
+        required: ['front', 'back'],
+      },
+    },
+  },
+  required: ['cards'],
+};
+
 /** Erreur : la sortie du LLM n'est pas un JSON de cartes valide. */
 export class CardParseError extends Error {
   public override readonly name = 'CardParseError';

@@ -42,7 +42,7 @@ export class WorkersAiProvider implements LLMProvider {
     public readonly model: string = DEFAULT_WORKERS_AI_MODEL,
   ) {}
 
-  public async complete({ system, user }: LLMCompletion): Promise<string> {
+  public async complete({ system, user, schema }: LLMCompletion): Promise<string> {
     const result = await this.ai.run(this.model, {
       messages: [
         { role: 'system', content: system },
@@ -50,8 +50,15 @@ export class WorkersAiProvider implements LLMProvider {
       ],
       // Sans plafond explicite, Workers AI tronque la réponse (~256 tokens) et
       // coupe le JSON en plein milieu → sortie invalide. Un plafond large laisse
-      // tenir le tableau complet de cartes (borné en amont à 8/section).
+      // tenir le tableau complet de cartes (borné en amont à 6/section).
       max_tokens: 2048,
+      // JSON Mode : contraint la sortie au schéma fourni. Le modèle par défaut
+      // (Llama 3.3 70B fp8-fast) figure dans la liste Workers AI supportant
+      // `response_format`. Format Cloudflare : le schéma va directement dans
+      // `json_schema` (pas d'enveloppe `{ name, schema }`).
+      ...(schema === undefined
+        ? {}
+        : { response_format: { type: 'json_schema', json_schema: schema } }),
     });
 
     if (typeof result === 'string') {
