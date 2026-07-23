@@ -1,3 +1,4 @@
+import type { AnswerResult, ExerciseAnswer, Lesson } from './lesson-types';
 import type { DueQueue, Preview, ReviewGrade, ReviewResult } from './types';
 
 /**
@@ -72,5 +73,26 @@ export function submitReview(
   return request<ReviewResult>('/reviews', {
     method: 'POST',
     body: JSON.stringify({ userId, itemId, grade }),
+  });
+}
+
+/** Une leçon jouable (exercices sans leurs solutions). */
+export function fetchLesson(lessonId: string): Promise<Lesson> {
+  return request<Lesson>(`/lessons/${encodeURIComponent(lessonId)}`);
+}
+
+/** Soumet une réponse d'exercice ; renvoie correction + note FSRS. */
+export function submitAnswer(input: {
+  lessonId: string;
+  userId: string;
+  exerciseId: string;
+  answer: ExerciseAnswer;
+  assisted: boolean;
+}): Promise<AnswerResult> {
+  const { lessonId, ...body } = input;
+
+  return request<AnswerResult>(`/lessons/${encodeURIComponent(lessonId)}/answers`, {
+    method: 'POST',
+    body: JSON.stringify(body),
   });
 }

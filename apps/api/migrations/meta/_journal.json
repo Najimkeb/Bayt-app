@@ -8,6 +8,13 @@
       "when": 1784753478635,
       "tag": "0000_learning_engine",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1784797487191,
+      "tag": "0001_lessons_exercises",
+      "breakpoints": true
     }
   ]
 }

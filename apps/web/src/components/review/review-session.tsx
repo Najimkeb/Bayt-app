@@ -2,7 +2,7 @@
 
 import { Button, Mascot, ProgressBar, type MascotMood } from '@bayt/ui';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 
 import { DEMO_USER_ID } from '@/lib/api/client';
 import { useDueQueue, usePreview, useSubmitReview } from '@/lib/api/queries';
@@ -49,12 +49,18 @@ export function ReviewSession(): ReactElement {
   const card = queue.data?.cards[0] ?? null;
   const itemId = card?.item.id ?? null;
 
-  // Total de la session : le plus grand nombre de cartes vu, pour une barre de
-  // progression qui avance sans reculer au fil des révisions.
-  const seenTotal = useRef(0);
+  // Total de la session, figé au premier chargement de la file : la barre de
+  // progression avance (cartes traitées / total) sans jamais reculer, même
+  // quand la file se vide. Mémorisé dans un état (et non muté au rendu) pour
+  // rester fiable à travers les re-rendus.
   const remaining = queue.data?.cards.length ?? 0;
-  seenTotal.current = Math.max(seenTotal.current, remaining);
-  const done = seenTotal.current - remaining;
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    setTotal((current) => Math.max(current, remaining));
+  }, [remaining]);
+
+  const done = Math.max(0, total - remaining);
 
   const preview = usePreview(userId, itemId, revealed);
 
@@ -169,7 +175,7 @@ export function ReviewSession(): ReactElement {
         />
       )}
 
-      <SessionProgress done={done} total={seenTotal.current} remaining={remaining} />
+      <SessionProgress done={done} total={total} remaining={remaining} />
 
       <AnimatePresence mode="wait">
         <motion.div

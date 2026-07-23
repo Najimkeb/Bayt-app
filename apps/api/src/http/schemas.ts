@@ -37,5 +37,30 @@ export const submitReviewBodySchema = z.object({
   reviewedAt: z.iso.datetime().optional(),
 });
 
+/**
+ * Réponse d'exercice, discriminée par `kind` (aligné sur `ExerciseAnswer` du
+ * domaine). Bornée pour rester raisonnable.
+ */
+const exerciseAnswerSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('mcq'), choice: z.number().int().min(0).max(50) }),
+  z.object({ kind: z.literal('fill_blank'), text: z.string().max(500) }),
+  z.object({
+    kind: z.literal('matching'),
+    pairs: z
+      .array(z.object({ leftId: z.string().max(16), rightId: z.string().max(16) }))
+      .max(50),
+  }),
+]);
+
+export const submitAnswerBodySchema = z.object({
+  userId,
+  exerciseId: z.string().min(1).max(128),
+  answer: exerciseAnswerSchema,
+  /** Un essai raté ou un indice a précédé cette réponse. */
+  assisted: z.boolean().optional(),
+  reviewedAt: z.iso.datetime().optional(),
+});
+
 export type DueQueueQuery = z.infer<typeof dueQueueQuerySchema>;
 export type SubmitReviewBody = z.infer<typeof submitReviewBodySchema>;
+export type SubmitAnswerBody = z.infer<typeof submitAnswerBodySchema>;

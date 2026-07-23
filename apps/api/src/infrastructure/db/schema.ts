@@ -1,6 +1,6 @@
 import { index, integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
-import { LEARNING_STATES, REVIEW_GRADES } from '@bayt/domain';
+import { EXERCISE_TYPES, LEARNING_STATES, REVIEW_GRADES } from '@bayt/domain';
 
 /**
  * Schema D1 du contexte « Learning Engine ».
@@ -101,4 +101,45 @@ export const reviewLogs = sqliteTable(
     index('review_logs_user_reviewed_idx').on(table.userId, table.reviewedAt),
     index('review_logs_item_idx').on(table.itemId),
   ],
+);
+
+/**
+ * Une leçon : une séquence ordonnée d'exercices variés.
+ *
+ * Contexte « Leçon » — au-dessus de la boucle FSRS, sans progression parallèle :
+ * chaque exercice révise un `learning_item` et produit une note de révision.
+ */
+export const lessons = sqliteTable('lessons', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  createdAt: integer('created_at').notNull(),
+});
+
+/**
+ * Un exercice d'une leçon.
+ *
+ * Le contenu propre à chaque type (options d'un QCM, réponse d'un texte à trous,
+ * paires d'une association) est stocké en JSON dans `payload` : les formes
+ * diffèrent trop pour des colonnes fixes, et le domaine reste seul juge de leur
+ * structure. La solution (bonne option, réponse, paires) vit dans ce payload et
+ * n'est **jamais** exposée par l'API de lecture.
+ */
+export const exercises = sqliteTable(
+  'exercises',
+  {
+    id: text('id').primaryKey(),
+    lessonId: text('lesson_id')
+      .notNull()
+      .references(() => lessons.id),
+    itemId: text('item_id')
+      .notNull()
+      .references(() => learningItems.id),
+    /** Rang dans la séquence de la leçon. */
+    position: integer('position').notNull(),
+    type: text('type', { enum: EXERCISE_TYPES }).notNull(),
+    prompt: text('prompt').notNull(),
+    /** Contenu spécifique au type (JSON), solution comprise. */
+    payload: text('payload').notNull(),
+  },
+  (table) => [index('exercises_lesson_position_idx').on(table.lessonId, table.position)],
 );

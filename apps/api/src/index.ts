@@ -2,6 +2,7 @@ import { Scheduler } from '@bayt/domain';
 import { drizzle } from 'drizzle-orm/d1';
 
 import { createApp } from './http/app.js';
+import { D1LessonRepository } from './infrastructure/repositories/d1-lesson.repository.js';
 import { D1ReviewRepository } from './infrastructure/repositories/d1-review.repository.js';
 
 /** Bindings Cloudflare attendus par le Worker (cf. wrangler.jsonc). */
@@ -18,8 +19,10 @@ export interface Env {
  */
 export default {
   fetch(request: Request, env: Env, context: ExecutionContext): Response | Promise<Response> {
+    const db = drizzle(env.DB);
     const app = createApp({
-      repository: new D1ReviewRepository(drizzle(env.DB)),
+      repository: new D1ReviewRepository(db),
+      lessonRepository: new D1LessonRepository(db),
       scheduler: new Scheduler(),
     });
 

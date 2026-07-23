@@ -63,5 +63,14 @@ Mapping fixe des 4 boutons de notation. Feedback : flash vert sur Good/Easy, rou
 **L020 — Les PNG de la mascotte doivent être à fond transparent (alpha réel).**
 `apps/web/public/mascot/{idle,celebrating}.png` sont actuellement **opaques** (PNG color type 2, RGB sans canal alpha) → carré blanc visible, surtout en Dark Mode. Le composant `Mascot` n'ajoute plus ni fond ni cadre : il faut fournir de vrais PNG détourés (RGBA). Ne pas retoucher les images soi-même sans le dire. Vérif rapide : `sips -g hasAlpha fichier.png`.
 
+**L021 — Une leçon d'exercices = une surcouche de la boucle FSRS, jamais un système parallèle.**
+Chaque réponse d'exercice se traduit en note FSRS et passe par `SubmitReview` (l'API de révision existante). Mapping **assumé** : faux → `Again` ; juste après un essai raté ou un indice → `Hard` ; juste du premier coup → `Good` (jamais `Easy` — on réserve le plus long intervalle à la révision libre). Le domaine possède les types d'exercices (QCM, texte à trous, association), leur correction déterministe (`checkAnswer`, pure, testée) et `gradeForOutcome` ; la séquence (remise en fin de file d'un exercice raté) est orchestrée par l'UI, comme la révision.
+
+**L022 — Pas de cœurs ni de vies : se tromper fait partie de l'apprentissage.**
+Choix pédagogique explicite (retrieval practice) : un exercice raté **revient en fin de file jusqu'à réussite**, sans pénalité de « vie ». L'erreur est un signal d'ancrage, pas une sanction. La progression compte les exercices réussis / total.
+
+**L023 — Les solutions ne quittent jamais l'API de lecture d'une leçon.**
+`GET /lessons/:id` renvoie les exercices **sans** `answerIndex`/`answer`/appariement correct ; pour une association, les côtés « droit » sont **mélangés** (Fisher-Yates dans le présentateur). La correction n'arrive qu'en réponse à `POST /lessons/:id/answers`. Verrouillé par un test HTTP (« ne divulgue jamais les solutions »).
+
 **L005 — Convention de cette mémoire.**
 Une leçon = une entrée courte et actionnable. Noter le nouveau et le confirmé, pas le déjà-écrit. Mettre à jour une leçon plutôt que la dupliquer.

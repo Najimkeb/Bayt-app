@@ -2,18 +2,33 @@ import { Scheduler } from '@bayt/domain';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
-import { ItemNotFoundError } from '../application/errors.js';
+import {
+  ExerciseNotFoundError,
+  ItemNotFoundError,
+  LessonNotFoundError,
+} from '../application/errors.js';
+import type { LessonRepository } from '../application/ports/lesson-repository.js';
 import type { ReviewRepository } from '../application/ports/review-repository.js';
 import { GetDueQueue } from '../application/use-cases/get-due-queue.js';
+import { GetLesson } from '../application/use-cases/get-lesson.js';
 import { PreviewReview } from '../application/use-cases/preview-review.js';
+import { SubmitExerciseAnswer } from '../application/use-cases/submit-exercise-answer.js';
 import { SubmitReview } from '../application/use-cases/submit-review.js';
+import { presentAnswerResult, presentLesson } from './lesson-presenters.js';
 import { presentDueCard, presentPreview, presentReviewResult } from './presenters.js';
-import { dueQueueQuerySchema, previewQuerySchema, submitReviewBodySchema } from './schemas.js';
+import {
+  dueQueueQuerySchema,
+  previewQuerySchema,
+  submitAnswerBodySchema,
+  submitReviewBodySchema,
+} from './schemas.js';
 
 /** Dependances injectees dans l'application HTTP. */
 export interface AppDependencies {
   readonly repository: ReviewRepository;
   readonly scheduler: Scheduler;
+  /** Persistance des leçons ; les routes `/lessons` ne sont montées que si fournie. */
+  readonly lessonRepository?: LessonRepository;
   /** Horloge injectable — la rend testable et le handler pur. */
   readonly clock?: () => Date;
   /**
@@ -38,6 +53,7 @@ const DEV_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000'] as const;
 export function createApp({
   repository,
   scheduler,
+  lessonRepository,
   clock = () => new Date(),
   allowedOrigins = DEV_ORIGINS,
 }: AppDependencies) {
@@ -132,6 +148,62 @@ export function createApp({
       throw error;
     }
   });
+
+  if (lessonRepository !== undefined) {
+    const getLesson = new GetLesson(lessonRepository);
+    const submitAnswer = new SubmitExerciseAnswer(lessonRepository, submitReview);
+
+    /** Une leçon jouable — exercices sans leurs solutions. */
+    app.get('/lessons/:lessonId', async (context) => {
+      const lessonId = context.req.param('lessonId');
+
+      try {
+        const lesson = await getLesson.execute(lessonId);
+
+        return context.json(presentLesson(lesson));
+      } catch (error) {
+        if (error instanceof LessonNotFoundError) {
+          return context.json({ error: 'lesson_not_found', lessonId: error.lessonId }, 404);
+        }
+
+        throw error;
+      }
+    });
+
+    /** Corrige une réponse d'exercice et l'enregistre comme révision FSRS. */
+    app.post('/lessons/:lessonId/answers', async (context) => {
+      const body = submitAnswerBodySchema.safeParse(await readJson(context.req.raw));
+
+      if (!body.success) {
+        return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
+      }
+
+      const { userId, exerciseId, answer, assisted, reviewedAt } = body.data;
+      const now = reviewedAt === undefined ? clock() : new Date(reviewedAt);
+
+      try {
+        const result = await submitAnswer.execute({
+          userId,
+          lessonId: context.req.param('lessonId'),
+          exerciseId,
+          answer,
+          assisted: assisted ?? false,
+          now,
+        });
+
+        return context.json(presentAnswerResult(result), 201);
+      } catch (error) {
+        if (error instanceof ExerciseNotFoundError) {
+          return context.json({ error: 'exercise_not_found', exerciseId: error.exerciseId }, 404);
+        }
+        if (error instanceof ItemNotFoundError) {
+          return context.json({ error: 'item_not_found', itemId: error.itemId }, 404);
+        }
+
+        throw error;
+      }
+    });
+  }
 
   return app;
 }
