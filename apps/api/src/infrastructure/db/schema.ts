@@ -2,6 +2,9 @@ import { index, integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm
 
 import { EXERCISE_TYPES, LEARNING_STATES, REVIEW_GRADES } from '@bayt/domain';
 
+import { DOCUMENT_FORMATS } from '../../ingestion/format.js';
+import { DOCUMENT_STATUSES } from '../../ingestion/document.js';
+
 /**
  * Schema D1 du contexte « Learning Engine ».
  *
@@ -197,3 +200,26 @@ export const userProgress = sqliteTable('user_progress', {
   dailyGoal: integer('daily_goal').notNull(),
   lastGoalDay: text('last_goal_day'),
 });
+
+/**
+ * Documents ingérés (contexte « Knowledge Ingestion ») : métadonnées et statut
+ * de traitement. Le fichier brut vit dans R2 (`r2_key`) ; les cartes générées
+ * deviennent des `learning_items` (`source_ref = 'doc:<id>'`).
+ */
+export const documents = sqliteTable(
+  'documents',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    filename: text('filename').notNull(),
+    contentType: text('content_type'),
+    format: text('format', { enum: DOCUMENT_FORMATS }).notNull(),
+    r2Key: text('r2_key').notNull(),
+    status: text('status', { enum: DOCUMENT_STATUSES }).notNull(),
+    error: text('error'),
+    cardCount: integer('card_count').notNull().default(0),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => [index('documents_user_created_idx').on(table.userId, table.createdAt)],
+);

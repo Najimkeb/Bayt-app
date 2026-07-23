@@ -7,11 +7,17 @@ import {
   ItemNotFoundError,
   LessonNotFoundError,
 } from '../application/errors.js';
+import type { DocumentRepository } from '../application/ports/document-repository.js';
+import type { IngestionQueue } from '../application/ports/ingestion-queue.js';
 import type { LessonRepository } from '../application/ports/lesson-repository.js';
+import type { ObjectStorage } from '../application/ports/object-storage.js';
 import type { PathRepository } from '../application/ports/path-repository.js';
 import type { ProgressRepository } from '../application/ports/progress-repository.js';
 import type { ReviewRepository } from '../application/ports/review-repository.js';
 import { CompleteLesson } from '../application/use-cases/complete-lesson.js';
+import { SubmitDocument } from '../application/use-cases/submit-document.js';
+import { UnsupportedFormatError } from '../ingestion/format.js';
+import { presentDocument } from './document-dto.js';
 import { GetDueQueue } from '../application/use-cases/get-due-queue.js';
 import { GetLesson } from '../application/use-cases/get-lesson.js';
 import { GetPath } from '../application/use-cases/get-path.js';
@@ -24,6 +30,7 @@ import { presentAnswerResult, presentLesson } from './lesson-presenters.js';
 import { presentDueCard, presentPreview, presentReviewResult } from './presenters.js';
 import {
   completeLessonBodySchema,
+  documentsQuerySchema,
   dueQueueQuerySchema,
   incrementProgressBodySchema,
   pathQuerySchema,
@@ -43,6 +50,13 @@ export interface AppDependencies {
   readonly progressRepository?: ProgressRepository;
   /** Persistance du chemin ; les routes `/path` ne sont montées que si fournie. */
   readonly pathRepository?: PathRepository;
+  /**
+   * Pipeline d'ingestion. Les routes `/documents` ne sont montées que si les
+   * trois dépendances (persistance, stockage, file) sont fournies.
+   */
+  readonly documentRepository?: DocumentRepository;
+  readonly objectStorage?: ObjectStorage;
+  readonly ingestionQueue?: IngestionQueue;
   /** Horloge injectable — la rend testable et le handler pur. */
   readonly clock?: () => Date;
   /**
@@ -70,6 +84,9 @@ export function createApp({
   lessonRepository,
   progressRepository,
   pathRepository,
+  documentRepository,
+  objectStorage,
+  ingestionQueue,
   clock = () => new Date(),
   allowedOrigins = DEV_ORIGINS,
 }: AppDependencies) {
@@ -287,6 +304,78 @@ export function createApp({
       );
 
       return context.json(path, 201);
+    });
+  }
+
+  if (
+    documentRepository !== undefined &&
+    objectStorage !== undefined &&
+    ingestionQueue !== undefined
+  ) {
+    const submitDocument = new SubmitDocument(
+      documentRepository,
+      objectStorage,
+      ingestionQueue,
+      clock,
+    );
+
+    /** Dépôt d'un document : stocké, mis en file, réponse immédiate (202). */
+    app.post('/documents', async (context) => {
+      let form: FormData;
+      try {
+        form = await context.req.raw.formData();
+      } catch {
+        return context.json({ error: 'invalid_request', detail: 'multipart/form-data attendu' }, 400);
+      }
+
+      const file = form.get('file');
+      if (!(file instanceof File)) {
+        return context.json({ error: 'invalid_request', detail: 'champ « file » manquant' }, 400);
+      }
+
+      const userIdField = form.get('userId');
+      const userId = typeof userIdField === 'string' && userIdField !== '' ? userIdField : 'demo';
+
+      try {
+        const document = await submitDocument.execute({
+          userId,
+          filename: file.name,
+          contentType: file.type === '' ? null : file.type,
+          bytes: new Uint8Array(await file.arrayBuffer()),
+        });
+
+        return context.json(presentDocument(document), 202);
+      } catch (error) {
+        if (error instanceof UnsupportedFormatError) {
+          return context.json({ error: 'unsupported_format', detail: error.detail }, 415);
+        }
+
+        throw error;
+      }
+    });
+
+    /** Liste des documents d'un apprenant, du plus récent au plus ancien. */
+    app.get('/documents', async (context) => {
+      const query = documentsQuerySchema.safeParse({ userId: context.req.query('userId') });
+
+      if (!query.success) {
+        return context.json({ error: 'invalid_request', details: query.error.issues }, 400);
+      }
+
+      const docs = await documentRepository.list(query.data.userId);
+
+      return context.json({ documents: docs.map(presentDocument) });
+    });
+
+    /** Statut de traitement d'un document précis. */
+    app.get('/documents/:id', async (context) => {
+      const document = await documentRepository.findById(context.req.param('id'));
+
+      if (document === null) {
+        return context.json({ error: 'document_not_found' }, 404);
+      }
+
+      return context.json(presentDocument(document));
     });
   }
 

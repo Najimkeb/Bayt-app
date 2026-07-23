@@ -87,6 +87,8 @@ export const pathQuerySchema = z.object({ userId });
 
 export const completeLessonBodySchema = z.object({ userId });
 
+export const documentsQuerySchema = z.object({ userId });
+
 export type DueQueueQuery = z.infer<typeof dueQueueQuerySchema>;
 export type SubmitReviewBody = z.infer<typeof submitReviewBodySchema>;
 export type SubmitAnswerBody = z.infer<typeof submitAnswerBodySchema>;

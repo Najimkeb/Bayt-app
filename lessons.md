@@ -87,5 +87,11 @@ On récompense l'effort (XP, flamme, objectif), on ne punit jamais l'erreur par 
 **L028 — Serpentin : décalage horizontal + colonne centrale, pas de trig fragile.**
 Nœuds empilés, décalés en `translateX` selon `index % 4` (centre/droite/centre/gauche) au-dessus d'une colonne centrale (le « chemin »). Robuste et responsive, sans connecteurs à angle calculé. Nœud disponible = pulsation (Framer Motion, coupée en `reduced-motion`) + badge « COMMENCER » ; verrouillé = non cliquable ; état annoncé via `aria-label` + `aria-current="step"`.
 
+**L029 — Ingestion : R2 (source) + Queue (async) + agent LLM + D1, tout en `apps/api`.**
+`POST /documents` stocke le brut dans R2, crée la ligne document (`pending`), pousse un message et répond (202) — chemin critique court. Le `queue()` consumer fait R2 → extraction → `splitIntoSections` → agent → `learning_items` (`source_ref='doc:<id>'`) → `ready`/`failed` (motif). Le domaine reste **pur** : tout le pipeline (extraction, LLM, découpage) vit dans `apps/api/src/ingestion`. Local complet sans compte Cloudflare : R2 + Queues simulés par `wrangler dev`.
+
+**L030 — L'agent est provider-agnostique ; sortie LLM strictement validée + retentée.**
+`LLMProvider` (interface) → `WorkersAiProvider` (premier, binding `AI`) ou `HeuristicProvider` (fallback local hors ligne). `CardGenerator` construit le prompt, valide la sortie par zod (`{cards:[{front,back}]}`), **retente** sur JSON invalide puis échoue (`CardGenerationError`), et **déduplique** via `normalizeText` du domaine. Piège rencontré : un provider naïf peut générer depuis les consignes du prompt — délimiter l'extrait (`"""…"""`) et n'en extraire que ce bloc.
+
 **L005 — Convention de cette mémoire.**
 Une leçon = une entrée courte et actionnable. Noter le nouveau et le confirmé, pas le déjà-écrit. Mettre à jour une leçon plutôt que la dupliquer.
