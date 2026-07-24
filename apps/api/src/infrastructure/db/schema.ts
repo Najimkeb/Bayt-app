@@ -129,7 +129,8 @@ export const domains = sqliteTable('domains', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   description: text('description').notNull(),
-  emoji: text('emoji').notNull(),
+  /** Nom de l'icône lucide-react (ex. `Brain`), mappé vers un composant côté UI. */
+  icon: text('icon').notNull(),
   /** Couleur d'accent (jeton `DomainColor` du domaine). */
   color: text('color').notNull(),
   /** Rang d'affichage dans le sélecteur de domaine. */

@@ -19,7 +19,7 @@ export class D1PathRepository implements PathRepository {
       id: d.id,
       name: d.name,
       description: d.description,
-      emoji: d.emoji,
+      icon: d.icon,
       color: d.color,
       position: d.position,
     }));

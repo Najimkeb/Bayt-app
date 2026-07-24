@@ -3,7 +3,8 @@ export interface DomainRow {
   readonly id: string;
   readonly name: string;
   readonly description: string;
-  readonly emoji: string;
+  /** Nom de l'icône lucide-react (mappé vers un composant côté UI). */
+  readonly icon: string;
   /** Jeton de couleur d'accent (`DomainColor`), stocké en texte. */
   readonly color: string;
   readonly position: number;

@@ -19,10 +19,10 @@ describe('CATALOG_DOMAINS', () => {
     expect(orders).toEqual([...Array(CATALOG_DOMAINS.length).keys()]);
   });
 
-  it('n’utilise que des couleurs d’accent connues et un emoji non vide', () => {
+  it('n’utilise que des couleurs d’accent connues et un nom d’icône non vide', () => {
     for (const domain of CATALOG_DOMAINS) {
       expect(DOMAIN_COLORS).toContain(domain.color);
-      expect(domain.emoji.length).toBeGreaterThan(0);
+      expect(domain.icon.length).toBeGreaterThan(0);
       expect(domain.description.length).toBeGreaterThan(0);
     }
   });

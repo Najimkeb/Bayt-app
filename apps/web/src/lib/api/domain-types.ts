@@ -10,7 +10,8 @@ export interface DomainOverview {
   readonly id: string;
   readonly name: string;
   readonly description: string;
-  readonly emoji: string;
+  /** Nom de l'icône lucide-react (cf. `icon-map.ts`). */
+  readonly icon: string;
   /** Jeton de couleur d'accent (cf. `domain-colors.ts`). */
   readonly color: string;
   readonly order: number;

@@ -32,7 +32,7 @@ const DOMAINS: DomainList = {
       id: 'dom_apprendre',
       name: 'Apprendre à apprendre',
       description: 'Les fondations de la mémorisation.',
-      emoji: '🧠',
+      icon: 'Brain',
       color: 'green',
       order: 0,
       lessonsCompleted: 1,

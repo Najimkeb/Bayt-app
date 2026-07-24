@@ -7,6 +7,7 @@ import type { ReactElement } from 'react';
 import type { DomainOverview } from '@/lib/api/domain-types';
 import { usePath } from '@/lib/api/path-queries';
 
+import { DomainIcon } from './domain-icon';
 import { UnitPath } from './unit-path';
 
 /**
@@ -50,9 +51,7 @@ function DomainHeader({ domain }: { domain: DomainOverview }): ReactElement {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-center gap-3">
-        <span aria-hidden="true" className="text-3xl">
-          {domain.emoji}
-        </span>
+        <DomainIcon name={domain.icon} color={domain.color} size="lg" />
         <div className="flex min-w-0 flex-col">
           <h2 className="text-xl font-black leading-tight">{domain.name}</h2>
           <p className="truncate text-sm font-bold text-muted-foreground">{domain.description}</p>

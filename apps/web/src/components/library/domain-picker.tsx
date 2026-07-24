@@ -39,7 +39,7 @@ export function DomainPicker({
         <option value="">Sans domaine</option>
         {domains.map((domain) => (
           <option key={domain.id} value={domain.id}>
-            {domain.emoji} {domain.name}
+            {domain.name}
           </option>
         ))}
       </select>

@@ -7,6 +7,8 @@ import type { ReactElement } from 'react';
 import { useDueQueue } from '@/lib/api/queries';
 import { useUserId } from '@/lib/auth/use-user-id';
 
+import { DomainIcon } from './domain-icon';
+
 /**
  * Carte « Réviser » mise en évidence en haut de l'accueil.
  *
@@ -36,9 +38,7 @@ export function ReviewCard(): ReactElement {
   return (
     <Surface className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-4">
-        <span aria-hidden="true" className="text-3xl">
-          🗂️
-        </span>
+        <DomainIcon name="Layers" color="green" size="lg" />
         <div className="flex flex-col">
           <p className="text-lg font-extrabold">À réviser maintenant</p>
           <p className="text-sm font-bold text-muted-foreground" aria-live="polite">

@@ -37,8 +37,8 @@ export interface Domain {
   readonly name: string;
   /** Description courte (une phrase). */
   readonly description: string;
-  /** Icône emoji. */
-  readonly emoji: string;
+  /** Nom de l'icône lucide-react (ex. `Brain`), mappé vers un composant côté UI. */
+  readonly icon: string;
   readonly color: DomainColor;
   /** Rang d'affichage dans le sélecteur. */
   readonly order: number;

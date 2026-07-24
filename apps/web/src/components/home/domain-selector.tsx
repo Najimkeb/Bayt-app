@@ -5,11 +5,13 @@ import type { CSSProperties, ReactElement } from 'react';
 import type { DomainOverview } from '@/lib/api/domain-types';
 import { paletteFor } from '@/lib/domain-colors';
 
+import { DomainIcon } from './domain-icon';
+
 /**
  * Sélecteur de domaine — rangée horizontale de cartes façon Duolingo.
  *
  * Chaque domaine est un bouton focusable (`aria-pressed` porte l'état
- * sélectionné) montrant son emoji, son nom, sa progression (leçons terminées /
+ * sélectionné) montrant son icône, son nom, sa progression (leçons terminées /
  * total) et un pastille des cartes dues. La rangée défile horizontalement sur
  * mobile ; la couleur d'accent vient du domaine.
  */
@@ -26,7 +28,11 @@ export function DomainSelector({
     <div
       role="group"
       aria-label="Choisir un domaine"
-      className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      // `overflow-x-auto` rend l'axe vertical clippé : sans padding, le badge de
+      // compteur (`-top-1 -right-1`) serait rogné en haut/à droite. Le padding
+      // (haut + côtés, prolongé par `-mx-5`) lui laisse la place, y compris sur
+      // la première et la dernière carte.
+      className="-mx-5 flex snap-x gap-3 overflow-x-auto px-5 pb-2 pt-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {domains.map((domain) => (
         <DomainTab
@@ -85,9 +91,7 @@ function DomainTab({
         </span>
       )}
 
-      <span aria-hidden="true" className="text-3xl leading-none">
-        {domain.emoji}
-      </span>
+      <DomainIcon name={domain.icon} color={domain.color} size="md" />
       <span className="line-clamp-2 text-xs font-extrabold leading-tight">{domain.name}</span>
       <span className="text-[0.7rem] font-bold text-muted-foreground">{progressLabel}</span>
 

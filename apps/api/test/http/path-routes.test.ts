@@ -15,7 +15,7 @@ const DOMAINS: readonly DomainRow[] = [
     id: 'dom_x',
     name: 'Apprendre à apprendre',
     description: 'Les fondations de la mémorisation.',
-    emoji: '🧠',
+    icon: 'Brain',
     color: 'green',
     position: 0,
   },

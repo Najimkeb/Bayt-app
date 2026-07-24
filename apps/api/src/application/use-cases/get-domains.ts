@@ -8,7 +8,8 @@ export interface DomainOverview {
   readonly id: string;
   readonly name: string;
   readonly description: string;
-  readonly emoji: string;
+  /** Nom de l'icône lucide-react (mappé vers un composant côté UI). */
+  readonly icon: string;
   readonly color: string;
   readonly order: number;
   readonly lessonsCompleted: number;
@@ -45,7 +46,7 @@ export class GetDomains {
         id: domain.id,
         name: domain.name,
         description: domain.description,
-        emoji: domain.emoji,
+        icon: domain.icon,
         color: domain.color,
         order: domain.position,
         lessonsCompleted: progress.completed,

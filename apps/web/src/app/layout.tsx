@@ -80,9 +80,11 @@ export default function RootLayout({ children }: { children: ReactNode }): React
 
           <div className="flex min-h-dvh flex-col">
             <header className="flex items-center justify-between gap-3 px-4 py-3.5 sm:px-8 sm:py-5">
-              <span className="flex min-w-0 items-baseline gap-2 truncate">
-                <span className="text-xl font-black tracking-tight sm:text-2xl">BAYT</span>
-                <span className="hidden truncate text-xs font-bold text-muted-foreground sm:inline">
+              <span className="flex min-w-0 items-baseline gap-2">
+                {/* Le wordmark ne se rogne jamais (`shrink-0`) ; seule la
+                    baseline (desktop) tronque si la place manque. */}
+                <span className="shrink-0 text-xl font-black tracking-tight sm:text-2xl">BAYT</span>
+                <span className="hidden min-w-0 truncate text-xs font-bold text-muted-foreground sm:inline">
                   apprendre pour de bon
                 </span>
               </span>

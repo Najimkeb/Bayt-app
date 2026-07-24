@@ -11,6 +11,7 @@ import { useProgress } from '@/lib/api/progress-queries';
 import { useDueQueue } from '@/lib/api/queries';
 import { useUserId } from '@/lib/auth/use-user-id';
 
+import { DomainIcon } from './domain-icon';
 import { DomainPath } from './domain-path';
 import { DomainSelector } from './domain-selector';
 import { ReviewCard } from './review-card';
@@ -106,9 +107,7 @@ function LibraryLink(): ReactElement {
       className="rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <Surface className="flex items-center gap-4 p-5 transition-colors hover:bg-surface-hover">
-        <span aria-hidden="true" className="text-3xl">
-          📚
-        </span>
+        <DomainIcon name="Library" color="blue" size="lg" />
         <div className="flex min-w-0 flex-col">
           <p className="text-lg font-extrabold">Bibliothèque</p>
           <p className="text-sm font-bold text-muted-foreground">

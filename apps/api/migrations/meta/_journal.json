@@ -57,6 +57,13 @@
       "when": 1784911279530,
       "tag": "0007_catalog_domains",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1784997679530,
+      "tag": "0008_domain_icons",
+      "breakpoints": true
     }
   ]
 }
