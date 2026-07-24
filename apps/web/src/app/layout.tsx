@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Nunito } from 'next/font/google';
 import type { ReactElement, ReactNode } from 'react';
 
+import { FocusSound } from '@/components/audio/focus-sound';
 import { AuthGate } from '@/components/auth/auth-gate';
 import { LogoutButton } from '@/components/auth/logout-button';
 import { ProgressHeader } from '@/components/progress/progress-header';
@@ -64,6 +65,7 @@ export default function RootLayout({ children }: { children: ReactNode }): React
               <div className="flex items-center gap-2 sm:gap-4">
                 <ProgressHeader />
                 <LogoutButton />
+                <FocusSound />
                 <ThemeToggle />
               </div>
             </header>
