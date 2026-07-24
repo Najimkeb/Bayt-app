@@ -67,8 +67,9 @@
         "BETTER_AUTH_URL": "https://api.bayt.app",
         "COOKIE_DOMAIN": ".bayt.app"
       },
-      // Domaine personnalisé de l'API : sous-domaine de la zone active bayt.app.
-      "routes": [{ "pattern": "api.bayt.app", "custom_domain": true }],
+      // Le domaine personnalisé `api.bayt.app` est attaché manuellement dans le
+      // dashboard (Workers & Pages → bayt-api-production → Custom Domains). Les
+      // `vars` ci-dessus pointent déjà vers les URLs de prod finales.
       "d1_databases": [
         {
           "binding": "DB",

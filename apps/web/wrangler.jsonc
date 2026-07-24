@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bayt-web-production",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-07-01",
+  // Requis par OpenNext (runtime Node de Next.js).
+  "compatibility_flags": ["nodejs_compat"],
+  // Assets statiques générés par OpenNext (build Next.js).
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "observability": { "enabled": true }
+  // Le domaine personnalisé `bayt.app` (apex) + la redirection `www` → apex sont
+  // attachés manuellement dans le dashboard (Workers & Pages → bayt-web-production
+  // → Custom Domains). `NEXT_PUBLIC_API_URL` est figé au build (voir scripts).
+}
