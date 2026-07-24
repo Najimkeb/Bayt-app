@@ -16,7 +16,7 @@ import { D1LessonRepository } from './infrastructure/repositories/d1-lesson.repo
 import { D1PathRepository } from './infrastructure/repositories/d1-path.repository.js';
 import { D1ProgressRepository } from './infrastructure/repositories/d1-progress.repository.js';
 import { D1ReviewRepository } from './infrastructure/repositories/d1-review.repository.js';
-import { R2ObjectStorage, type R2Like } from './infrastructure/storage/r2-object-storage.js';
+import { D1DocumentStorage } from './infrastructure/storage/d1-document-storage.js';
 
 /**
  * Bindings Cloudflare attendus par le Worker (cf. wrangler.jsonc).
@@ -26,7 +26,6 @@ import { R2ObjectStorage, type R2Like } from './infrastructure/storage/r2-object
  */
 export interface Env {
   readonly DB: D1Database;
-  readonly DOCS: R2Like;
   readonly INGESTION_QUEUE: QueueLike;
   readonly AI?: WorkersAiBinding;
   /** Secret de signature Better Auth (`.dev.vars` en local, secret Worker en prod). */
@@ -35,6 +34,13 @@ export interface Env {
   readonly BETTER_AUTH_URL?: string;
   /** Origine du front autorisée (session + CORS). Défaut : localhost:3000. */
   readonly WEB_ORIGIN?: string;
+  /** Domaine du cookie de session partagé entre sous-domaines (prod, ex. `.bayt.app`). */
+  readonly COOKIE_DOMAIN?: string;
+  /**
+   * Cache KV de production (compteur de cartes dues, sessions…).
+   * Provisionné, pas encore consommé par le code — binding prêt à l'emploi.
+   */
+  readonly KV?: KVNamespace;
 }
 
 /** Origines du front autorisées (session + CORS) — surchargées par `WEB_ORIGIN`. */
@@ -71,7 +77,7 @@ function createProvider(env: Env): LLMProvider {
 function createIngestor(db: DrizzleD1Database, env: Env): IngestDocument {
   return new IngestDocument(
     new D1DocumentRepository(db),
-    new R2ObjectStorage(env.DOCS),
+    new D1DocumentStorage(db),
     new CardGenerator(createProvider(env)),
   );
 }
@@ -93,6 +99,9 @@ export default {
       secret: env.BETTER_AUTH_SECRET,
       baseURL: env.BETTER_AUTH_URL ?? new URL(request.url).origin,
       trustedOrigins: origins,
+      ...(env.COOKIE_DOMAIN !== undefined && env.COOKIE_DOMAIN !== ''
+        ? { cookieDomain: env.COOKIE_DOMAIN }
+        : {}),
     });
 
     const app = createApp({
@@ -101,7 +110,7 @@ export default {
       progressRepository: new D1ProgressRepository(db),
       pathRepository: new D1PathRepository(db),
       documentRepository: new D1DocumentRepository(db),
-      objectStorage: new R2ObjectStorage(env.DOCS),
+      documentStorage: new D1DocumentStorage(db),
       ingestionQueue: new CfIngestionQueue(env.INGESTION_QUEUE),
       scheduler: new Scheduler(),
       sessionVerifier: new BetterAuthSessionVerifier(auth),

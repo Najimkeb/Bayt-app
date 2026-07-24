@@ -29,8 +29,8 @@ export interface DocumentRepository {
    * Supprime un document et **toutes** ses cartes (et leur état de révision).
    *
    * `sourceRef` désigne les cartes du document (`doc:<id>`). Opération atomique
-   * côté persistance. Ne touche pas au fichier source (R2) : c'est le cas
-   * d'usage qui l'orchestre via `ObjectStorage`.
+   * côté persistance. Ne touche pas au texte extrait : c'est le cas d'usage qui
+   * l'orchestre via `DocumentStorage`.
    */
   delete(id: string, sourceRef: string): Promise<void>;
 }

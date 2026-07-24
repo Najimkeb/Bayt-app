@@ -208,7 +208,8 @@ export const userProgress = sqliteTable('user_progress', {
 
 /**
  * Documents ingérés (contexte « Knowledge Ingestion ») : métadonnées et statut
- * de traitement. Le fichier brut vit dans R2 (`r2_key`) ; les cartes générées
+ * de traitement. Le **texte extrait** est stocké ici (`extracted_text`), en
+ * attendant l'activation de R2 (cf. lessons.md L031) ; les cartes générées
  * deviennent des `learning_items` (`source_ref = 'doc:<id>'`).
  */
 export const documents = sqliteTable(
@@ -219,7 +220,8 @@ export const documents = sqliteTable(
     filename: text('filename').notNull(),
     contentType: text('content_type'),
     format: text('format', { enum: DOCUMENT_FORMATS }).notNull(),
-    r2Key: text('r2_key').notNull(),
+    /** Texte extrait à la réception (source de la génération). `null` si non extrait. */
+    extractedText: text('extracted_text'),
     status: text('status', { enum: DOCUMENT_STATUSES }).notNull(),
     error: text('error'),
     cardCount: integer('card_count').notNull().default(0),

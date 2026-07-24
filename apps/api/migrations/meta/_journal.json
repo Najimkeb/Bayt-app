@@ -43,6 +43,13 @@
       "when": 1784829458747,
       "tag": "0005_nostalgic_invaders",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1784837822678,
+      "tag": "0006_drop_r2_add_extracted_text",
+      "breakpoints": true
     }
   ]
 }

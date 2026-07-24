@@ -5,7 +5,7 @@ import { createApp } from '../../src/http/app.js';
 import { InMemoryIngestionQueue } from '../../src/infrastructure/queue/cf-ingestion-queue.js';
 import { InMemoryDocumentRepository } from '../../src/infrastructure/repositories/in-memory-document.repository.js';
 import { InMemoryReviewRepository } from '../../src/infrastructure/repositories/in-memory-review.repository.js';
-import { InMemoryObjectStorage } from '../../src/infrastructure/storage/in-memory-object-storage.js';
+import { InMemoryDocumentStorage } from '../../src/infrastructure/storage/in-memory-document-storage.js';
 import { alwaysUser } from '../support/session.js';
 
 let docs: InMemoryDocumentRepository;
@@ -18,7 +18,7 @@ beforeEach(() => {
   app = createApp({
     repository: new InMemoryReviewRepository(),
     documentRepository: docs,
-    objectStorage: new InMemoryObjectStorage(),
+    documentStorage: new InMemoryDocumentStorage(),
     ingestionQueue: queue,
     scheduler: new Scheduler(),
     sessionVerifier: alwaysUser('demo'),

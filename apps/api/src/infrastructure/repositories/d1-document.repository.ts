@@ -120,7 +120,6 @@ function toRecord(row: DocumentRow): DocumentRecord {
     filename: row.filename,
     contentType: row.contentType,
     format: row.format,
-    r2Key: row.r2Key,
     status: row.status,
     error: row.error,
     cardCount: row.cardCount,

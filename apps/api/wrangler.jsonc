@@ -19,14 +19,10 @@
     }
   ],
 
-  // R2 : stockage des documents source bruts. En local, wrangler simule le
-  // bucket sous .wrangler/state/ — aucun compte Cloudflare requis.
-  "r2_buckets": [
-    {
-      "binding": "DOCS",
-      "bucket_name": "bayt-documents"
-    }
-  ],
+  // R2 retiré : tant que l'abonnement R2 n'est pas actif, le texte extrait des
+  // documents est stocké dans D1 (`documents.extracted_text`) via le port
+  // `DocumentStorage`. R2 reste la cible (cf. lessons.md L031) — on rebranchera
+  // un binding + une implémentation `R2DocumentStorage` sans toucher au pipeline.
 
   // Queues : traitement asynchrone de l'ingestion, hors du chemin critique.
   // Le même Worker est producteur (POST /documents) et consommateur (queue()).
@@ -57,5 +53,43 @@
 
   "observability": {
     "enabled": true
+  },
+
+  // ─── Production ───────────────────────────────────────────────────────────
+  // Déployé avec `wrangler deploy --env production`. Le top-level ci-dessus reste
+  // la config de DEV LOCAL (localhost) ; l'environnement `production` redéclare
+  // toutes les ressources (les bindings ne sont pas hérités) avec leurs vrais
+  // identifiants, le domaine personnalisé et les URLs de prod.
+  "env": {
+    "production": {
+      "vars": {
+        "WEB_ORIGIN": "https://bayt.app",
+        "BETTER_AUTH_URL": "https://api.bayt.app",
+        "COOKIE_DOMAIN": ".bayt.app"
+      },
+      // Domaine personnalisé de l'API : sous-domaine de la zone active bayt.app.
+      "routes": [{ "pattern": "api.bayt.app", "custom_domain": true }],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "bayt-prod",
+          "database_id": "ff0e8877-dcd4-482e-a019-999ca45f50f1",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "queues": {
+        "producers": [{ "binding": "INGESTION_QUEUE", "queue": "bayt-ingestion" }],
+        "consumers": [
+          {
+            "queue": "bayt-ingestion",
+            "max_batch_size": 1,
+            "max_batch_timeout": 5,
+            "max_retries": 3
+          }
+        ]
+      },
+      "kv_namespaces": [{ "binding": "KV", "id": "bd02ee04c2884473ac54ab41259e5328" }],
+      "ai": { "binding": "AI" }
+    }
   }
 }

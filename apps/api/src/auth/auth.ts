@@ -12,6 +12,12 @@ export interface AuthOptions {
   readonly baseURL: string;
   /** Origines autorisées à porter une session (le front). */
   readonly trustedOrigins: readonly string[];
+  /**
+   * Domaine du cookie de session, pour le **partager entre sous-domaines**
+   * (`.bayt.app` → couvre `bayt.app` et `api.bayt.app`). Absent en local
+   * (localhost) : le cookie reste alors sur l'hôte courant.
+   */
+  readonly cookieDomain?: string;
 }
 
 /**
@@ -36,6 +42,16 @@ export function createAuth(db: DrizzleD1Database, options: AuthOptions) {
       // Aucun service d'e-mail n'est encore branché : exiger la vérification
       // empêcherait toute connexion. À réactiver quand l'envoi sera en place.
       requireEmailVerification: false,
+    },
+    advanced: {
+      // Front et API sur deux sous-domaines : le cookie doit porter le domaine
+      // racine (`.bayt.app`) pour être envoyé aux deux. En prod, `baseURL` est
+      // en HTTPS → Better Auth pose automatiquement `Secure` ; `SameSite=Lax`
+      // (défaut) suffit car les deux sous-domaines sont *same-site*. En local
+      // (pas de `cookieDomain`), le cookie reste sur l'hôte, sans `Secure`.
+      ...(options.cookieDomain !== undefined
+        ? { crossSubDomainCookies: { enabled: true, domain: options.cookieDomain } }
+        : {}),
     },
     // Point d'extension : `socialProviders: { google: {...} }` ajoutera l'OAuth
     // plus tard sans toucher au schéma ni aux routes (cf. table `account`).

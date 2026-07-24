@@ -7,7 +7,7 @@ import { UnsupportedFormatError } from '../../src/ingestion/format.js';
 import type { LLMProvider } from '../../src/ingestion/llm/provider.js';
 import { InMemoryIngestionQueue } from '../../src/infrastructure/queue/cf-ingestion-queue.js';
 import { InMemoryDocumentRepository } from '../../src/infrastructure/repositories/in-memory-document.repository.js';
-import { InMemoryObjectStorage } from '../../src/infrastructure/storage/in-memory-object-storage.js';
+import { InMemoryDocumentStorage } from '../../src/infrastructure/storage/in-memory-document-storage.js';
 
 const NOW = new Date('2026-03-01T12:00:00Z');
 const encode = (text: string): Uint8Array => new TextEncoder().encode(text);
@@ -26,7 +26,7 @@ const provider = (): LLMProvider => ({
 });
 
 let docs: InMemoryDocumentRepository;
-let storage: InMemoryObjectStorage;
+let storage: InMemoryDocumentStorage;
 let queue: InMemoryIngestionQueue;
 let submit: SubmitDocument;
 let ingest: IngestDocument;
@@ -34,7 +34,7 @@ let idCounter: number;
 
 beforeEach(() => {
   docs = new InMemoryDocumentRepository();
-  storage = new InMemoryObjectStorage();
+  storage = new InMemoryDocumentStorage();
   queue = new InMemoryIngestionQueue();
   idCounter = 0;
   const nextId = (): string => `id-${String(idCounter++)}`;
@@ -44,7 +44,7 @@ beforeEach(() => {
 });
 
 describe('SubmitDocument', () => {
-  it('stocke le fichier, crée le document (pending) et met en file', async () => {
+  it('extrait le texte, crée le document (pending), le stocke et met en file', async () => {
     const doc = await submit.execute({
       userId: 'demo',
       filename: 'cours.md',
@@ -54,8 +54,10 @@ describe('SubmitDocument', () => {
 
     expect(doc.status).toBe('pending');
     expect(doc.format).toBe('markdown');
+    // La file ne transporte que l'id (pas le texte).
     expect(queue.sent).toEqual([{ documentId: doc.id }]);
-    await expect(storage.get(doc.r2Key)).resolves.not.toBeNull();
+    // Le texte extrait est stocké, relisible par le consumer via l'id.
+    await expect(storage.get(doc.id)).resolves.toContain('Contenu.');
   });
 
   it('refuse un format non pris en charge', async () => {
@@ -91,7 +93,7 @@ describe('IngestDocument (consumer)', () => {
     expect(items[0]?.sourceRef).toBe(`doc:${doc.id}`);
   });
 
-  it('passe en failed avec motif si le fichier est absent de R2', async () => {
+  it('passe en failed avec motif si le texte extrait est absent en base', async () => {
     const doc = await submit.execute({
       userId: 'demo',
       filename: 'cours.txt',
@@ -99,15 +101,15 @@ describe('IngestDocument (consumer)', () => {
       bytes: encode('contenu'),
     });
 
-    // On simule un objet manquant en vidant le stockage.
-    const empty = new InMemoryObjectStorage();
+    // On simule un texte manquant en donnant au consumer un stockage vide.
+    const empty = new InMemoryDocumentStorage();
     const brokenIngest = new IngestDocument(docs, empty, new CardGenerator(provider()), () => NOW);
 
     await brokenIngest.execute(doc.id);
 
     const updated = await docs.findById(doc.id);
     expect(updated?.status).toBe('failed');
-    expect(updated?.error).toContain('R2');
+    expect(updated?.error).toContain('introuvable');
   });
 
   it('ne fait rien pour un document inconnu', async () => {

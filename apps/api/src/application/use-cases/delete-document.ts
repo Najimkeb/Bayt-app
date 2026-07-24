@@ -1,17 +1,17 @@
 import type { DocumentRepository } from '../ports/document-repository.js';
-import type { ObjectStorage } from '../ports/object-storage.js';
+import type { DocumentStorage } from '../ports/document-storage.js';
 
 /**
  * Cas d'usage « je supprime un document ».
  *
- * Retire le fichier source (R2), puis le document et toutes ses cartes (et leur
- * état de révision) en base. Sert notamment à nettoyer les documents en échec
- * sans avoir à les réingérer.
+ * Retire le texte extrait (via `DocumentStorage`), puis le document et toutes
+ * ses cartes (et leur état de révision) en base. Sert notamment à nettoyer les
+ * documents en échec sans avoir à les réingérer.
  */
 export class DeleteDocument {
   public constructor(
     private readonly documents: DocumentRepository,
-    private readonly storage: ObjectStorage,
+    private readonly storage: DocumentStorage,
   ) {}
 
   /**
@@ -25,9 +25,9 @@ export class DeleteDocument {
       return false;
     }
 
-    // Le fichier brut d'abord (best-effort côté port : delete ne lève pas si
+    // Le texte extrait d'abord (best-effort côté port : delete ne lève pas si
     // absent), puis les lignes en base de manière atomique.
-    await this.storage.delete(document.r2Key);
+    await this.storage.delete(id);
     await this.documents.delete(id, `doc:${id}`);
 
     return true;

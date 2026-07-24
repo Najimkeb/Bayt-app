@@ -15,8 +15,6 @@ export interface DocumentRecord {
   readonly filename: string;
   readonly contentType: string | null;
   readonly format: DocumentFormat;
-  /** Clé de l'objet source dans R2. */
-  readonly r2Key: string;
   readonly status: DocumentStatus;
   /** Motif d'échec, si `status === 'failed'`. */
   readonly error: string | null;

@@ -1,6 +1,6 @@
 import type { DocumentRecord, LearningItemRecord } from '../ingestion/document.js';
 
-/** Un document tel qu'exposé par l'API (sans la clé R2 interne). */
+/** Un document tel qu'exposé par l'API (sans le texte extrait interne). */
 export interface DocumentDto {
   readonly id: string;
   readonly filename: string;

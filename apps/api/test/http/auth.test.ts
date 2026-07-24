@@ -6,7 +6,7 @@ import { InMemoryIngestionQueue } from '../../src/infrastructure/queue/cf-ingest
 import { InMemoryDocumentRepository } from '../../src/infrastructure/repositories/in-memory-document.repository.js';
 import { InMemoryProgressRepository } from '../../src/infrastructure/repositories/in-memory-progress.repository.js';
 import { InMemoryReviewRepository } from '../../src/infrastructure/repositories/in-memory-review.repository.js';
-import { InMemoryObjectStorage } from '../../src/infrastructure/storage/in-memory-object-storage.js';
+import { InMemoryDocumentStorage } from '../../src/infrastructure/storage/in-memory-document-storage.js';
 import { authAs, bearerVerifier } from '../support/session.js';
 
 let app: ReturnType<typeof createApp>;
@@ -16,7 +16,7 @@ beforeEach(() => {
     repository: new InMemoryReviewRepository(),
     progressRepository: new InMemoryProgressRepository(),
     documentRepository: new InMemoryDocumentRepository(),
-    objectStorage: new InMemoryObjectStorage(),
+    documentStorage: new InMemoryDocumentStorage(),
     ingestionQueue: new InMemoryIngestionQueue(),
     scheduler: new Scheduler(),
     // La vérification de session est pilotée par l'en-tête (pas de Better Auth

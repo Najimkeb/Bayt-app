@@ -8,9 +8,9 @@ import {
   LessonNotFoundError,
 } from '../application/errors.js';
 import type { DocumentRepository } from '../application/ports/document-repository.js';
+import type { DocumentStorage } from '../application/ports/document-storage.js';
 import type { IngestionQueue } from '../application/ports/ingestion-queue.js';
 import type { LessonRepository } from '../application/ports/lesson-repository.js';
-import type { ObjectStorage } from '../application/ports/object-storage.js';
 import type { PathRepository } from '../application/ports/path-repository.js';
 import type { ProgressRepository } from '../application/ports/progress-repository.js';
 import type { ReviewRepository } from '../application/ports/review-repository.js';
@@ -72,7 +72,7 @@ export interface AppDependencies {
    * trois dépendances (persistance, stockage, file) sont fournies.
    */
   readonly documentRepository?: DocumentRepository;
-  readonly objectStorage?: ObjectStorage;
+  readonly documentStorage?: DocumentStorage;
   readonly ingestionQueue?: IngestionQueue;
   /** Horloge injectable — la rend testable et le handler pur. */
   readonly clock?: () => Date;
@@ -111,7 +111,7 @@ export function createApp({
   progressRepository,
   pathRepository,
   documentRepository,
-  objectStorage,
+  documentStorage,
   ingestionQueue,
   clock = () => new Date(),
   allowedOrigins = DEV_ORIGINS,
@@ -343,16 +343,16 @@ export function createApp({
 
   if (
     documentRepository !== undefined &&
-    objectStorage !== undefined &&
+    documentStorage !== undefined &&
     ingestionQueue !== undefined
   ) {
     const submitDocument = new SubmitDocument(
       documentRepository,
-      objectStorage,
+      documentStorage,
       ingestionQueue,
       clock,
     );
-    const deleteDocument = new DeleteDocument(documentRepository, objectStorage);
+    const deleteDocument = new DeleteDocument(documentRepository, documentStorage);
 
     /** Dépôt d'un document : stocké, mis en file, réponse immédiate (202). */
     app.post('/documents', async (context) => {
@@ -424,7 +424,7 @@ export function createApp({
     });
 
     /**
-     * Supprime un document et ses cartes (fichier source R2 compris).
+     * Supprime un document et ses cartes (texte extrait compris).
      *
      * Réservé au propriétaire. 204 si supprimé, 404 si absent ou pas à lui.
      */
