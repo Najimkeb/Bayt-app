@@ -60,7 +60,7 @@ export function AuthForm({ mode }: { mode: Mode }): ReactElement {
 
     if (result.error) {
       setPending(false);
-      setError(frenchError(result.error.code, result.error.message));
+      setError(authErrorMessage(result.error));
 
       return;
     }
@@ -187,18 +187,43 @@ function Field({
   );
 }
 
-/** Traduit les erreurs Better Auth les plus courantes en messages clairs. */
-function frenchError(code: string | undefined, fallback: string | undefined): string {
-  switch (code) {
-    case 'INVALID_EMAIL_OR_PASSWORD':
-      return 'E-mail ou mot de passe incorrect.';
+/** Erreur telle qu'exposée par le client Better Auth. */
+interface AuthError {
+  readonly code?: string | undefined;
+  readonly message?: string | undefined;
+  readonly status?: number | undefined;
+}
+
+/**
+ * Traduit une erreur d'auth en message clair, en **distinguant** :
+ * - identifiants incorrects (**401**) — sans jamais révéler si l'e-mail existe ;
+ * - erreur serveur (**5xx**) ;
+ * - serveur injoignable (réseau, statut 0/absent) ;
+ * - cas connus (compte existant, mot de passe trop court…).
+ */
+function authErrorMessage(error: AuthError): string {
+  switch (error.code) {
     case 'USER_ALREADY_EXISTS':
       return 'Un compte existe déjà avec cet e-mail.';
     case 'PASSWORD_TOO_SHORT':
       return `Le mot de passe doit faire au moins ${String(MIN_PASSWORD)} caractères.`;
     case 'INVALID_EMAIL':
       return 'Cet e-mail n’est pas valide.';
-    default:
-      return fallback || 'Quelque chose n’a pas fonctionné. Réessaie.';
+    case 'INVALID_EMAIL_OR_PASSWORD':
+      return 'E-mail ou mot de passe incorrect.';
   }
+
+  const status = error.status;
+  // 401 : identifiants incorrects — message identique compte existant ou non.
+  if (status === 401) {
+    return 'E-mail ou mot de passe incorrect.';
+  }
+  if (status !== undefined && status >= 500) {
+    return 'Erreur serveur — réessaie dans un instant.';
+  }
+  if (status === undefined || status === 0) {
+    return 'Impossible de joindre le serveur. Vérifie ta connexion, puis réessaie.';
+  }
+
+  return 'Quelque chose n’a pas fonctionné. Réessaie.';
 }

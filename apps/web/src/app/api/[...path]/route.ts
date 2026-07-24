@@ -11,10 +11,23 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
  * l'API et **renvoie la réponse telle quelle** — `Set-Cookie` compris, que le
  * navigateur attribue alors à l'hôte du front (cookie **first-party**).
  *
- * Mapping : `/api/<X>` → `<API>/<X>`. Routes app (`/api/reviews`) et auth
- * (`/api/api/auth/*`, préfixe `/api` du client + basePath `/api/auth`) passent
- * par la même règle.
+ * Mapping :
+ * - **auth** — `/api/auth/*` est **conservé** (→ `<API>/api/auth/*`), car Better
+ *   Auth est monté à `/api/auth` sur le Worker API. Le client Better Auth appelle
+ *   des chemins **absolus** (`/api/auth/…`) : le suffixe `/api` de sa `baseURL` est
+ *   ignoré par la résolution d'URL. Sans ce cas, on retirerait `/api` → `<API>/auth/*`
+ *   → la garde d'auth répond 401 « unauthorized » (sans `code`) → message générique.
+ * - **app** — tout le reste retire le préfixe : `/api/reviews` → `<API>/reviews`.
  */
+
+/** Chemin à joindre côté Worker API. Conserve `/api/auth/*`, retire `/api` ailleurs. */
+function toApiPath(pathname: string): string {
+  if (pathname === '/api/auth' || pathname.startsWith('/api/auth/')) {
+    return pathname; // route d'auth : conservée telle quelle
+  }
+
+  return pathname.replace(/^\/api/, ''); // route app : préfixe retiré
+}
 
 /** En-têtes à ne pas retransmettre tels quels vers l'amont. */
 const STRIPPED_REQUEST_HEADERS = new Set(['host', 'content-length', 'connection']);
@@ -32,8 +45,7 @@ async function proxy(request: Request): Promise<Response> {
   }
 
   const incoming = new URL(request.url);
-  // Retire le préfixe `/api` : `/api/reviews/queue` → `/reviews/queue`.
-  const path = incoming.pathname.replace(/^\/api/, '');
+  const path = toApiPath(incoming.pathname);
   // L'hôte est ignoré par le Service Binding : seul le chemin compte pour l'API.
   const target = `https://api.internal${path}${incoming.search}`;
 
