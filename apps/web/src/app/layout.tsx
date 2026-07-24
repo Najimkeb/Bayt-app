@@ -36,11 +36,19 @@ export const metadata: Metadata = {
     title: 'BAYT',
     statusBarStyle: 'default',
   },
-  // Icône d'accueil : fond plein (le renard sur le vert de la charte), jamais
-  // transparente — iOS rendrait la transparence en noir.
+  // Icône d'accueil : fond plein (le renard sur crème), jamais transparente —
+  // iOS rendrait la transparence en noir. Coins non arrondis (iOS applique son
+  // masque). 180 est la principale iPhone ; 152/167 pour iPad.
   icons: {
-    icon: [{ url: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
-    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+      { url: '/apple-touch-icon-152.png', sizes: '152x152', type: 'image/png' },
+      { url: '/apple-touch-icon-167.png', sizes: '167x167', type: 'image/png' },
+    ],
   },
   // Équivalent standardisé de `apple-mobile-web-app-capable` (Chrome/Android).
   other: { 'mobile-web-app-capable': 'yes' },

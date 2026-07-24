@@ -14,7 +14,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Apprendre pour de bon — rappel actif, répétition espacée et un mentor bienveillant.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#ffffff',
+    // Aligné sur le crème de l'icône → écran de lancement cohérent (pas de flash blanc).
+    background_color: '#faf5ec',
     theme_color: '#58cc02',
     lang: 'fr',
     icons: [
