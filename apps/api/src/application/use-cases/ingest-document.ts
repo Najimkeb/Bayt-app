@@ -64,6 +64,8 @@ export class IngestDocument {
         front: card.front,
         back: card.back,
         sourceRef,
+        // Les cartes héritent du domaine choisi au dépôt du document.
+        domainId: document.domainId,
         createdAt,
       }));
 

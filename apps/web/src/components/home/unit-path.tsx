@@ -1,16 +1,9 @@
 import type { ReactElement } from 'react';
 
 import type { PathUnit } from '@/lib/api/path-types';
+import { paletteFor } from '@/lib/domain-colors';
 
 import { LessonNode } from './lesson-node';
-
-/** Fond du bandeau d'unité selon sa couleur. */
-const BANNER_BG: Record<string, string> = {
-  green: 'var(--color-feather-green)',
-  blue: 'var(--color-macaw)',
-  yellow: 'var(--color-bee)',
-  purple: '#a560e8',
-};
 
 /** Amplitude horizontale du serpentin (px). */
 const AMP = 52;
@@ -21,18 +14,21 @@ function offsetFor(index: number): number {
 }
 
 /**
- * Une unité du chemin : un bandeau titre coloré, puis ses leçons en nœuds
- * disposés en serpentin vertical (alternance centre / droite / gauche), reliés
- * par une colonne centrale.
+ * Une unité du chemin : un bandeau titre coloré (couleur du domaine), puis ses
+ * leçons en nœuds disposés en serpentin vertical (alternance centre / droite /
+ * gauche), reliés par une colonne centrale.
+ *
+ * La couleur ne vient plus de l'unité mais du **domaine** : toutes les unités
+ * d'un domaine partagent son accent, gage de cohérence visuelle.
  */
-export function UnitPath({ unit }: { unit: PathUnit }): ReactElement {
-  const bg = BANNER_BG[unit.color] ?? BANNER_BG.green;
+export function UnitPath({ unit, color }: { unit: PathUnit; color: string }): ReactElement {
+  const { fill } = paletteFor(color);
 
   return (
     <section aria-label={`Unité : ${unit.title}`} className="flex flex-col gap-6">
       <div
         className="rounded-[var(--radius-card)] px-5 py-4 text-center text-lg font-black text-white shadow-[0_4px_0_rgba(0,0,0,0.15)]"
-        style={{ backgroundColor: bg }}
+        style={{ backgroundColor: fill }}
       >
         {unit.title}
       </div>
@@ -46,7 +42,7 @@ export function UnitPath({ unit }: { unit: PathUnit }): ReactElement {
         <ol className="relative flex flex-col items-center gap-7">
           {unit.lessons.map((node, index) => (
             <li key={node.id} style={{ transform: `translateX(${String(offsetFor(index))}px)` }}>
-              <LessonNode node={node} color={unit.color} />
+              <LessonNode node={node} color={color} />
             </li>
           ))}
         </ol>

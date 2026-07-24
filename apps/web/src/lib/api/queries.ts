@@ -15,14 +15,21 @@ import type { DueQueue, Preview, ReviewGrade, ReviewResult } from './types';
  */
 
 export const queryKeys = {
-  queue: (userId: string) => ['queue', userId] as const,
+  /** Clé de la file — scoping par domaine (`'all'` = tous domaines confondus). */
+  queue: (userId: string, domainId?: string) => ['queue', userId, domainId ?? 'all'] as const,
   preview: (userId: string, itemId: string) => ['preview', userId, itemId] as const,
 };
 
-export function useDueQueue(userId: string) {
+/**
+ * File de révision, éventuellement filtrée sur un domaine.
+ *
+ * `domainId` absent = tous domaines confondus (accueil, révision libre) ;
+ * fourni = seules les cartes de ce domaine.
+ */
+export function useDueQueue(userId: string, domainId?: string) {
   return useQuery({
-    queryKey: queryKeys.queue(userId),
-    queryFn: () => fetchDueQueue(),
+    queryKey: queryKeys.queue(userId, domainId),
+    queryFn: () => fetchDueQueue(20, domainId),
     // Les echeances evoluent cote serveur : on ne garde pas la file trop longtemps.
     staleTime: 30_000,
   });
@@ -43,7 +50,7 @@ export function usePreview(userId: string, itemId: string | null, enabled: boole
   });
 }
 
-export function useSubmitReview(userId: string) {
+export function useSubmitReview(userId: string, domainId?: string) {
   const queryClient = useQueryClient();
 
   return useMutation<
@@ -55,7 +62,7 @@ export function useSubmitReview(userId: string) {
     mutationFn: ({ itemId, grade }) => submitReview(itemId, grade),
 
     onMutate: async ({ itemId }) => {
-      const key = queryKeys.queue(userId);
+      const key = queryKeys.queue(userId, domainId);
       await queryClient.cancelQueries({ queryKey: key });
 
       const previous = queryClient.getQueryData<DueQueue>(key);
@@ -71,7 +78,7 @@ export function useSubmitReview(userId: string) {
 
     onError: (_error, _variables, context) => {
       if (context?.previous !== undefined) {
-        queryClient.setQueryData(queryKeys.queue(userId), context.previous);
+        queryClient.setQueryData(queryKeys.queue(userId, domainId), context.previous);
       }
     },
 

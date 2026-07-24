@@ -15,9 +15,17 @@ import { z } from 'zod';
 /** Nombre maximum de cartes servies en une session de revision. */
 const MAX_QUEUE_LIMIT = 100;
 
+/** Identifiant de domaine (catalogue). */
+const domainId = z.string().min(1).max(128);
+
 export const dueQueueQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(MAX_QUEUE_LIMIT).optional(),
+  /** Filtre la file sur un domaine ; absent = tous domaines confondus. */
+  domainId: domainId.optional(),
 });
+
+/** Chemin d'un domaine précis. */
+export const pathQuerySchema = z.object({ domainId });
 
 export const previewQuerySchema = z.object({
   itemId: z.string().min(1).max(128),

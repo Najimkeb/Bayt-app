@@ -29,8 +29,9 @@ export class GetDueQueue {
     userId: string,
     now: Date,
     limit: number = DEFAULT_QUEUE_LIMIT,
+    domainId?: string,
   ): Promise<readonly DueCard[]> {
-    const cards = await this.repository.findDue(userId, now, limit);
+    const cards = await this.repository.findDue(userId, now, limit, domainId);
 
     return cards.map(({ item, state }) => {
       // Une carte jamais planifiee est due immediatement : on materialise son

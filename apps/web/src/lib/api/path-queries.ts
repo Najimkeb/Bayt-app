@@ -3,31 +3,41 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { fetchPath, markLessonComplete } from './client';
+import { domainsKey } from './domain-queries';
 import type { LearningPath } from './path-types';
 
-export const pathKey = (userId: string): readonly string[] => ['path', userId];
+/** Clé de cache du chemin — scoping par domaine (chaque domaine a son chemin). */
+export const pathKey = (userId: string, domainId: string): readonly string[] => [
+  'path',
+  userId,
+  domainId,
+];
 
-/** Chemin de progression de l'apprenant. */
-export function usePath(userId: string) {
+/** Chemin de progression d'un domaine. Inerte tant qu'aucun domaine n'est choisi. */
+export function usePath(userId: string, domainId: string | null) {
   return useQuery<LearningPath>({
-    queryKey: pathKey(userId),
-    queryFn: () => fetchPath(),
+    queryKey: pathKey(userId, domainId ?? ''),
+    queryFn: () => fetchPath(domainId as string),
+    enabled: domainId !== null,
     staleTime: 10_000,
   });
 }
 
 /**
- * Marque une leçon terminée et met à jour le chemin en cache.
+ * Marque une leçon terminée puis réinvalide chemin et catalogue.
  *
- * Appelé à la fin d'une leçon : la suivante se débloque immédiatement à l'accueil.
+ * Le chemin étant scoping par domaine, on ne devine pas ici lequel rafraîchir :
+ * on invalide tous les chemins en cache (et le catalogue, dont la progression
+ * change). La leçon suivante se débloque au prochain rendu de l'accueil.
  */
 export function useCompleteLesson(userId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation<LearningPath, Error, string>({
+  return useMutation<{ ok: boolean }, Error, string>({
     mutationFn: (lessonId) => markLessonComplete(lessonId),
-    onSuccess: (path) => {
-      queryClient.setQueryData<LearningPath>(pathKey(userId), path);
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['path', userId] });
+      void queryClient.invalidateQueries({ queryKey: domainsKey(userId) });
     },
   });
 }

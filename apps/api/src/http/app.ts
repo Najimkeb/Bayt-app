@@ -19,6 +19,7 @@ import { DeleteDocument } from '../application/use-cases/delete-document.js';
 import { SubmitDocument } from '../application/use-cases/submit-document.js';
 import { UnsupportedFormatError } from '../ingestion/format.js';
 import { presentDocument, presentDocumentCard } from './document-dto.js';
+import { GetDomains } from '../application/use-cases/get-domains.js';
 import { GetDueQueue } from '../application/use-cases/get-due-queue.js';
 import { GetLesson } from '../application/use-cases/get-lesson.js';
 import { GetPath } from '../application/use-cases/get-path.js';
@@ -33,6 +34,7 @@ import type { SessionVerifier } from './session.js';
 import {
   dueQueueQuerySchema,
   incrementProgressBodySchema,
+  pathQuerySchema,
   previewQuerySchema,
   progressQuerySchema,
   submitAnswerBodySchema,
@@ -165,14 +167,22 @@ export function createApp({
 
   /** File des cartes dues pour l'apprenant authentifié. */
   app.get('/reviews/queue', async (context) => {
-    const query = dueQueueQuerySchema.safeParse({ limit: context.req.query('limit') });
+    const query = dueQueueQuerySchema.safeParse({
+      limit: context.req.query('limit'),
+      domainId: context.req.query('domainId'),
+    });
 
     if (!query.success) {
       return context.json({ error: 'invalid_request', details: query.error.issues }, 400);
     }
 
     const now = clock();
-    const cards = await getDueQueue.execute(context.get('userId'), now, query.data.limit);
+    const cards = await getDueQueue.execute(
+      context.get('userId'),
+      now,
+      query.data.limit,
+      query.data.domainId,
+    );
 
     return context.json({
       now: now.toISOString(),
@@ -321,23 +331,31 @@ export function createApp({
   }
 
   if (pathRepository !== undefined) {
+    const getDomains = new GetDomains(pathRepository, repository);
     const getPath = new GetPath(pathRepository);
     const completeLesson = new CompleteLesson(pathRepository);
 
-    /** Chemin de progression : unités, leçons et leur état (nœuds). */
-    app.get('/path', async (context) => {
-      return context.json(await getPath.execute(context.get('userId')));
+    /** Catalogue : domaines avec la progression de l'apprenant (leçons, cartes dues). */
+    app.get('/domains', async (context) => {
+      return context.json({ domains: await getDomains.execute(context.get('userId'), clock()) });
     });
 
-    /** Marque une leçon terminée (débloque la suivante) et renvoie le chemin à jour. */
-    app.post('/lessons/:lessonId/complete', async (context) => {
-      const path = await completeLesson.execute(
-        context.get('userId'),
-        context.req.param('lessonId'),
-        clock(),
-      );
+    /** Chemin de progression d'un domaine : ses unités, leçons et l'état des nœuds. */
+    app.get('/path', async (context) => {
+      const query = pathQuerySchema.safeParse({ domainId: context.req.query('domainId') });
 
-      return context.json(path, 201);
+      if (!query.success) {
+        return context.json({ error: 'invalid_request', details: query.error.issues }, 400);
+      }
+
+      return context.json(await getPath.execute(context.get('userId'), query.data.domainId));
+    });
+
+    /** Marque une leçon terminée (débloque la suivante). L'UI réinvalide le chemin. */
+    app.post('/lessons/:lessonId/complete', async (context) => {
+      await completeLesson.execute(context.get('userId'), context.req.param('lessonId'), clock());
+
+      return context.json({ ok: true }, 201);
     });
   }
 
@@ -368,12 +386,17 @@ export function createApp({
         return context.json({ error: 'invalid_request', detail: 'champ « file » manquant' }, 400);
       }
 
+      // Domaine de rattachement, choisi au dépôt. Absent = non catégorisé (null).
+      const rawDomainId = form.get('domainId');
+      const domainId = typeof rawDomainId === 'string' && rawDomainId !== '' ? rawDomainId : null;
+
       try {
         const document = await submitDocument.execute({
           userId: context.get('userId'),
           filename: file.name,
           contentType: file.type === '' ? null : file.type,
           bytes: new Uint8Array(await file.arrayBuffer()),
+          domainId,
         });
 
         return context.json(presentDocument(document), 202);

@@ -28,6 +28,8 @@ export const learningItems = sqliteTable('learning_items', {
   back: text('back').notNull(),
   /** D'ou vient l'item : document ingere, creation manuelle... */
   sourceRef: text('source_ref'),
+  /** Domaine de rattachement (révision par domaine). `null` = non catégorisé. */
+  domainId: text('domain_id'),
   createdAt: integer('created_at').notNull(),
 });
 
@@ -118,16 +120,34 @@ export const reviewLogs = sqliteTable(
  * chaque exercice révise un `learning_item` et produit une note de révision.
  */
 /**
- * Une unité : un groupe ordonné de leçons, avec un bandeau titre coloré.
+ * Un **domaine** : racine du catalogue (Domaine → Unité → Leçon).
  *
- * Contexte « Content Catalog » — structure le chemin de progression de l'accueil.
+ * Contexte « Content Catalog ». La couleur d'accent vit ici (plus sur l'unité) ;
+ * l'UI colore le chemin d'un domaine avec.
+ */
+export const domains = sqliteTable('domains', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  emoji: text('emoji').notNull(),
+  /** Couleur d'accent (jeton `DomainColor` du domaine). */
+  color: text('color').notNull(),
+  /** Rang d'affichage dans le sélecteur de domaine. */
+  position: integer('position').notNull(),
+  createdAt: integer('created_at').notNull(),
+});
+
+/**
+ * Une unité : un groupe ordonné de leçons, **rattachée à un domaine**.
+ *
+ * Structure le chemin de progression de l'accueil, pour un domaine donné.
  */
 export const units = sqliteTable('units', {
   id: text('id').primaryKey(),
   title: text('title').notNull(),
-  /** Couleur du bandeau (jeton : `green` | `blue` | `yellow` | `purple`). */
-  color: text('color').notNull(),
-  /** Rang de l'unité dans le chemin. */
+  /** Domaine d'appartenance (identifiant d'un `domains.id`). */
+  domainId: text('domain_id').notNull(),
+  /** Rang de l'unité dans le domaine. */
   position: integer('position').notNull(),
   createdAt: integer('created_at').notNull(),
 });
@@ -220,6 +240,8 @@ export const documents = sqliteTable(
     filename: text('filename').notNull(),
     contentType: text('content_type'),
     format: text('format', { enum: DOCUMENT_FORMATS }).notNull(),
+    /** Domaine choisi au dépôt (les cartes générées en héritent). `null` = non catégorisé. */
+    domainId: text('domain_id'),
     /** Texte extrait à la réception (source de la génération). `null` si non extrait. */
     extractedText: text('extracted_text'),
     status: text('status', { enum: DOCUMENT_STATUSES }).notNull(),

@@ -8,6 +8,8 @@ export interface DocumentDto {
   readonly status: DocumentRecord['status'];
   readonly error: string | null;
   readonly cardCount: number;
+  /** Domaine de rattachement choisi au dépôt (`null` = non catégorisé). */
+  readonly domainId: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -20,6 +22,7 @@ export function presentDocument(document: DocumentRecord): DocumentDto {
     status: document.status,
     error: document.error,
     cardCount: document.cardCount,
+    domainId: document.domainId,
     createdAt: new Date(document.createdAt).toISOString(),
     updatedAt: new Date(document.updatedAt).toISOString(),
   };

@@ -1,74 +1,23 @@
-import type { PathRepository, PathUnitRow } from '../ports/path-repository.js';
+import { assignNodeStates, type PathUnitView } from '@bayt/domain';
 
-/**
- * État d'un nœud du chemin.
- * - `completed` : leçon terminée ;
- * - `available` : la prochaine leçon à jouer (une seule à la fois) ;
- * - `locked` : verrouillée tant que la précédente n'est pas terminée.
- */
-export type LessonNodeState = 'completed' | 'available' | 'locked';
+import type { PathRepository } from '../ports/path-repository.js';
 
-export interface PathLessonNode {
-  readonly id: string;
-  readonly title: string;
-  readonly state: LessonNodeState;
-}
-
-export interface PathUnit {
-  readonly id: string;
-  readonly title: string;
-  readonly color: string;
-  readonly lessons: readonly PathLessonNode[];
-}
-
+/** Chemin de progression d'un domaine : ses unités et l'état de leurs nœuds. */
 export interface LearningPath {
-  readonly units: readonly PathUnit[];
+  readonly units: readonly PathUnitView[];
 }
 
-/**
- * Attribue les états des nœuds, dans l'ordre global du chemin.
- *
- * Règle Duolingo : les leçons terminées sont `completed`, la **première** non
- * terminée est `available`, toutes les suivantes sont `locked`. Pure et
- * testable.
- */
-export function assignNodeStates(
-  units: readonly PathUnitRow[],
-  completed: ReadonlySet<string>,
-): PathUnit[] {
-  let availableAssigned = false;
-
-  return units.map((unit) => ({
-    id: unit.id,
-    title: unit.title,
-    color: unit.color,
-    lessons: unit.lessons.map((lesson) => {
-      let state: LessonNodeState;
-
-      if (completed.has(lesson.id)) {
-        state = 'completed';
-      } else if (!availableAssigned) {
-        state = 'available';
-        availableAssigned = true;
-      } else {
-        state = 'locked';
-      }
-
-      return { id: lesson.id, title: lesson.title, state };
-    }),
-  }));
-}
-
-/** Cas d'usage « donne-moi le chemin de progression de l'apprenant ». */
+/** Cas d'usage « donne-moi le chemin de progression d'un domaine ». */
 export class GetPath {
   public constructor(private readonly repository: PathRepository) {}
 
-  public async execute(userId: string): Promise<LearningPath> {
+  public async execute(userId: string, domainId: string): Promise<LearningPath> {
     const [units, completed] = await Promise.all([
-      this.repository.findUnits(),
+      this.repository.findUnits(domainId),
       this.repository.findCompletedLessonIds(userId),
     ]);
 
+    // La règle de progression (une seule leçon disponible) vit dans le domaine.
     return { units: assignNodeStates(units, new Set(completed)) };
   }
 }

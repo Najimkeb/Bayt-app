@@ -15,6 +15,8 @@ export interface DocumentRecord {
   readonly filename: string;
   readonly contentType: string | null;
   readonly format: DocumentFormat;
+  /** Domaine choisi au dépôt (hérité par les cartes). `null` = non catégorisé. */
+  readonly domainId: string | null;
   readonly status: DocumentStatus;
   /** Motif d'échec, si `status === 'failed'`. */
   readonly error: string | null;
@@ -31,5 +33,7 @@ export interface LearningItemRecord {
   readonly front: string;
   readonly back: string;
   readonly sourceRef: string;
+  /** Domaine de rattachement (hérité du document). `null` = non catégorisé. */
+  readonly domainId: string | null;
   readonly createdAt: number;
 }

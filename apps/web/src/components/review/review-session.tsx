@@ -34,12 +34,12 @@ interface Flash {
  * Le composant ne décide jamais d'un intervalle : il affiche ce que l'API
  * projette (`preview`) et enregistre ce que l'apprenant répond (`POST /reviews`).
  */
-export function ReviewSession(): ReactElement {
+export function ReviewSession({ domainId }: { domainId?: string | undefined } = {}): ReactElement {
   const userId = useUserId();
   const reduceMotion = useReducedMotion();
 
-  const queue = useDueQueue(userId);
-  const submit = useSubmitReview(userId);
+  const queue = useDueQueue(userId, domainId);
+  const submit = useSubmitReview(userId, domainId);
   const increment = useIncrementProgress(userId);
 
   const [revealed, setRevealed] = useState(false);

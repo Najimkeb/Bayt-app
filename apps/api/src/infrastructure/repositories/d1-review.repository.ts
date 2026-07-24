@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 
 import type {
@@ -31,7 +31,16 @@ export class D1ReviewRepository implements ReviewRepository {
    * par cet apprenant, il est donc du immediatement et passe en tete.
    * S'appuie sur l'index `(user_id, due)`.
    */
-  public async findDue(userId: string, now: Date, limit: number): Promise<readonly ReviewCard[]> {
+  public async findDue(
+    userId: string,
+    now: Date,
+    limit: number,
+    domainId?: string,
+  ): Promise<readonly ReviewCard[]> {
+    const due = or(isNull(schedulingState.itemId), lte(schedulingState.due, now.getTime()));
+    const where =
+      domainId === undefined ? due : and(due, eq(learningItems.domainId, domainId));
+
     const rows = await this.db
       .select({ item: learningItems, state: schedulingState })
       .from(learningItems)
@@ -39,12 +48,41 @@ export class D1ReviewRepository implements ReviewRepository {
         schedulingState,
         and(eq(schedulingState.itemId, learningItems.id), eq(schedulingState.userId, userId)),
       )
-      .where(or(isNull(schedulingState.itemId), lte(schedulingState.due, now.getTime())))
+      .where(where)
       // Les cartes neuves (`due` NULL) d'abord, puis par echeance croissante.
       .orderBy(asc(sql`coalesce(${schedulingState.due}, -1)`), asc(learningItems.id))
       .limit(limit);
 
     return rows.map(toReviewCard);
+  }
+
+  public async dueCountsByDomain(
+    userId: string,
+    now: Date,
+  ): Promise<ReadonlyMap<string, number>> {
+    const rows = await this.db
+      .select({ domainId: learningItems.domainId, count: sql<number>`count(*)` })
+      .from(learningItems)
+      .leftJoin(
+        schedulingState,
+        and(eq(schedulingState.itemId, learningItems.id), eq(schedulingState.userId, userId)),
+      )
+      .where(
+        and(
+          isNotNull(learningItems.domainId),
+          or(isNull(schedulingState.itemId), lte(schedulingState.due, now.getTime())),
+        ),
+      )
+      .groupBy(learningItems.domainId);
+
+    const map = new Map<string, number>();
+    for (const row of rows) {
+      if (row.domainId !== null) {
+        map.set(row.domainId, Number(row.count));
+      }
+    }
+
+    return map;
   }
 
   public async findCard(userId: string, itemId: string): Promise<ReviewCard | null> {

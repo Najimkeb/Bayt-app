@@ -36,11 +36,18 @@ export function useDocuments(userId: string) {
   });
 }
 
+/** Un dépôt de document : le fichier et le domaine de rattachement choisi. */
+export interface UploadInput {
+  readonly file: File;
+  /** Domaine choisi au dépôt (`null` = non catégorisé). */
+  readonly domainId: string | null;
+}
+
 export function useUploadDocument(userId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation<DocumentDto, Error, File>({
-    mutationFn: (file) => uploadDocument(file),
+  return useMutation<DocumentDto, Error, UploadInput>({
+    mutationFn: ({ file, domainId }) => uploadDocument(file, domainId ?? undefined),
 
     onSuccess: (created) => {
       const key = documentKeys.list(userId);

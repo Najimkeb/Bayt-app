@@ -43,8 +43,18 @@ export interface ReviewRepository {
   /**
    * Cartes a reviser pour un apprenant, triees par echeance croissante
    * (les cartes jamais planifiees passent en premier).
+   *
+   * `domainId` filtre les cartes d'un domaine ; absent = tous domaines confondus.
    */
-  findDue(userId: string, now: Date, limit: number): Promise<readonly ReviewCard[]>;
+  findDue(
+    userId: string,
+    now: Date,
+    limit: number,
+    domainId?: string,
+  ): Promise<readonly ReviewCard[]>;
+
+  /** Nombre de cartes dues par domaine (cartes sans domaine exclues). */
+  dueCountsByDomain(userId: string, now: Date): Promise<ReadonlyMap<string, number>>;
 
   /** Une carte precise, ou `null` si l'item n'existe pas. */
   findCard(userId: string, itemId: string): Promise<ReviewCard | null>;

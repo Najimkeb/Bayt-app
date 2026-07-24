@@ -108,6 +108,7 @@ export class D1DocumentRepository implements DocumentRepository {
       front: row.front,
       back: row.back,
       sourceRef: row.sourceRef ?? sourceRef,
+      domainId: row.domainId,
       createdAt: row.createdAt,
     }));
   }
@@ -120,6 +121,7 @@ function toRecord(row: DocumentRow): DocumentRecord {
     filename: row.filename,
     contentType: row.contentType,
     format: row.format,
+    domainId: row.domainId,
     status: row.status,
     error: row.error,
     cardCount: row.cardCount,

@@ -95,8 +95,8 @@ describe('GET /documents/:id/cards', () => {
 
     // Simule ce que le consumer écrit après traitement.
     await docs.replaceLearningItems(`doc:${created.id}`, [
-      { id: 'c1', type: 'flashcard', front: 'Q1', back: 'R1', sourceRef: `doc:${created.id}`, createdAt: 1 },
-      { id: 'c2', type: 'flashcard', front: 'Q2', back: 'R2', sourceRef: `doc:${created.id}`, createdAt: 2 },
+      { id: 'c1', type: 'flashcard', front: 'Q1', back: 'R1', sourceRef: `doc:${created.id}`, domainId: null, createdAt: 1 },
+      { id: 'c2', type: 'flashcard', front: 'Q2', back: 'R2', sourceRef: `doc:${created.id}`, domainId: null, createdAt: 2 },
     ]);
 
     const response = await app.request(`/documents/${created.id}/cards`);
@@ -119,7 +119,7 @@ describe('DELETE /documents/:id', () => {
       id: string;
     };
     await docs.replaceLearningItems(`doc:${created.id}`, [
-      { id: 'c1', type: 'flashcard', front: 'Q', back: 'R', sourceRef: `doc:${created.id}`, createdAt: 1 },
+      { id: 'c1', type: 'flashcard', front: 'Q', back: 'R', sourceRef: `doc:${created.id}`, domainId: null, createdAt: 1 },
     ]);
 
     const response = await app.request(`/documents/${created.id}`, { method: 'DELETE' });

@@ -2,29 +2,29 @@
 -- Appliqué avec : pnpm db:seed:local
 -- Idempotent : rejouable sans erreur.
 
-INSERT OR REPLACE INTO learning_items (id, type, front, back, source_ref, created_at) VALUES
-  ('itm_fsrs',       'flashcard', 'Que modélise FSRS pour chaque carte ?',            'La stabilité (durée avant oubli) et la difficulté.', 'seed:demo', 1767225600000),
-  ('itm_retrieval',  'flashcard', 'Qu''est-ce que l''active recall ?',                 'Se forcer à retrouver l''information de mémoire, plutôt que la relire.', 'seed:demo', 1767225600000),
-  ('itm_d1',         'flashcard', 'Quel service Cloudflare sert de base SQL ?',        'D1.', 'seed:demo', 1767225600000),
-  ('itm_interleave', 'flashcard', 'En quoi consiste l''interleaving ?',                'Alterner les sujets pendant une session plutôt que les traiter en blocs.', 'seed:demo', 1767225600000),
-  ('itm_cloze',      'cloze',     'La courbe de l''oubli a été décrite par {{c1::Ebbinghaus}}.', 'Ebbinghaus', 'seed:demo', 1767225600000);
+INSERT OR REPLACE INTO learning_items (id, type, front, back, source_ref, domain_id, created_at) VALUES
+  ('itm_fsrs',       'flashcard', 'Que modélise FSRS pour chaque carte ?',            'La stabilité (durée avant oubli) et la difficulté.', 'seed:demo', 'dom_apprendre', 1767225600000),
+  ('itm_retrieval',  'flashcard', 'Qu''est-ce que l''active recall ?',                 'Se forcer à retrouver l''information de mémoire, plutôt que la relire.', 'seed:demo', 'dom_apprendre', 1767225600000),
+  ('itm_d1',         'flashcard', 'Quel service Cloudflare sert de base SQL ?',        'D1.', 'seed:demo', 'dom_apprendre', 1767225600000),
+  ('itm_interleave', 'flashcard', 'En quoi consiste l''interleaving ?',                'Alterner les sujets pendant une session plutôt que les traiter en blocs.', 'seed:demo', 'dom_apprendre', 1767225600000),
+  ('itm_cloze',      'cloze',     'La courbe de l''oubli a été décrite par {{c1::Ebbinghaus}}.', 'Ebbinghaus', 'seed:demo', 'dom_apprendre', 1767225600000);
 
 -- ============================================================================
 -- Leçon de démonstration : 6 exercices mêlant QCM, texte à trous et association.
 -- Chaque exercice révise un learning_item dédié (la réponse devient une note FSRS).
 -- ============================================================================
 
-INSERT OR REPLACE INTO learning_items (id, type, front, back, source_ref, created_at) VALUES
-  ('lx_item_1', 'flashcard', 'Active recall ?',        'Se tester de mémoire.',                'seed:lesson', 1767225600000),
-  ('lx_item_2', 'flashcard', 'Base SQL de Cloudflare ?','D1.',                                  'seed:lesson', 1767225600000),
-  ('lx_item_3', 'flashcard', 'Auteur de la courbe de l''oubli ?', 'Ebbinghaus.',                'seed:lesson', 1767225600000),
-  ('lx_item_4', 'flashcard', 'Alterner les sujets ?',  'Interleaving.',                        'seed:lesson', 1767225600000),
-  ('lx_item_5', 'flashcard', 'Termes FSRS ?',          'Stabilité, difficulté, rétrievabilité.','seed:lesson', 1767225600000),
-  ('lx_item_6', 'flashcard', 'Services Cloudflare ?',  'D1, R2, KV.',                          'seed:lesson', 1767225600000);
+INSERT OR REPLACE INTO learning_items (id, type, front, back, source_ref, domain_id, created_at) VALUES
+  ('lx_item_1', 'flashcard', 'Active recall ?',        'Se tester de mémoire.',                'seed:lesson', 'dom_apprendre', 1767225600000),
+  ('lx_item_2', 'flashcard', 'Base SQL de Cloudflare ?','D1.',                                  'seed:lesson', 'dom_apprendre', 1767225600000),
+  ('lx_item_3', 'flashcard', 'Auteur de la courbe de l''oubli ?', 'Ebbinghaus.',                'seed:lesson', 'dom_apprendre', 1767225600000),
+  ('lx_item_4', 'flashcard', 'Alterner les sujets ?',  'Interleaving.',                        'seed:lesson', 'dom_apprendre', 1767225600000),
+  ('lx_item_5', 'flashcard', 'Termes FSRS ?',          'Stabilité, difficulté, rétrievabilité.','seed:lesson', 'dom_apprendre', 1767225600000),
+  ('lx_item_6', 'flashcard', 'Services Cloudflare ?',  'D1, R2, KV.',                          'seed:lesson', 'dom_apprendre', 1767225600000);
 
 -- Unité du chemin de progression (accueil).
-INSERT OR REPLACE INTO units (id, title, color, position, created_at) VALUES
-  ('unit_fondamentaux', 'Fondamentaux de la mémorisation', 'green', 0, 1767225600000);
+INSERT OR REPLACE INTO units (id, title, domain_id, position, created_at) VALUES
+  ('unit_fondamentaux', 'Fondamentaux de la mémorisation', 'dom_apprendre', 0, 1767225600000);
 
 INSERT OR REPLACE INTO lessons (id, title, unit_id, position, created_at) VALUES
   ('lesson_demo', 'Les bases', 'unit_fondamentaux', 0, 1767225600000);
@@ -58,13 +58,13 @@ INSERT OR REPLACE INTO exercises (id, lesson_id, item_id, position, type, prompt
 -- Leçons supplémentaires de l'unité (verrouillées au départ, débloquées à la suite).
 -- ============================================================================
 
-INSERT OR REPLACE INTO learning_items (id, type, front, back, source_ref, created_at) VALUES
-  ('lx_item_7',  'flashcard', 'Répétition espacée ?',   'Revoir à intervalles croissants.',     'seed:lesson', 1767225600000),
-  ('lx_item_8',  'flashcard', 'Feynman ?',              'Expliquer simplement pour comprendre.', 'seed:lesson', 1767225600000),
-  ('lx_item_9',  'flashcard', 'Interrogation de rappel ?','Se tester plutôt que relire.',       'seed:lesson', 1767225600000),
-  ('lx_item_10', 'flashcard', 'Taxonomie de Bloom ?',   'Niveaux de maîtrise cognitive.',       'seed:lesson', 1767225600000),
-  ('lx_item_11', 'flashcard', 'Surapprentissage ?',     'Continuer après la première réussite.', 'seed:lesson', 1767225600000),
-  ('lx_item_12', 'flashcard', 'Effet de test ?',        'Se tester renforce la mémoire.',        'seed:lesson', 1767225600000);
+INSERT OR REPLACE INTO learning_items (id, type, front, back, source_ref, domain_id, created_at) VALUES
+  ('lx_item_7',  'flashcard', 'Répétition espacée ?',   'Revoir à intervalles croissants.',     'seed:lesson', 'dom_apprendre', 1767225600000),
+  ('lx_item_8',  'flashcard', 'Feynman ?',              'Expliquer simplement pour comprendre.', 'seed:lesson', 'dom_apprendre', 1767225600000),
+  ('lx_item_9',  'flashcard', 'Interrogation de rappel ?','Se tester plutôt que relire.',       'seed:lesson', 'dom_apprendre', 1767225600000),
+  ('lx_item_10', 'flashcard', 'Taxonomie de Bloom ?',   'Niveaux de maîtrise cognitive.',       'seed:lesson', 'dom_apprendre', 1767225600000),
+  ('lx_item_11', 'flashcard', 'Surapprentissage ?',     'Continuer après la première réussite.', 'seed:lesson', 'dom_apprendre', 1767225600000),
+  ('lx_item_12', 'flashcard', 'Effet de test ?',        'Se tester renforce la mémoire.',        'seed:lesson', 'dom_apprendre', 1767225600000);
 
 INSERT OR REPLACE INTO lessons (id, title, unit_id, position, created_at) VALUES
   ('lesson_srs',      'Répétition espacée', 'unit_fondamentaux', 1, 1767225600000),

@@ -11,6 +11,8 @@ export interface UploadedFile {
   readonly filename: string;
   readonly contentType: string | null;
   readonly bytes: Uint8Array;
+  /** Domaine choisi au dépôt (les cartes en héritent). `null` = non catégorisé. */
+  readonly domainId: string | null;
 }
 
 /**
@@ -47,6 +49,7 @@ export class SubmitDocument {
       filename: file.filename,
       contentType: file.contentType,
       format,
+      domainId: file.domainId,
       cardCount: 0,
       createdAt: now,
     } as const;

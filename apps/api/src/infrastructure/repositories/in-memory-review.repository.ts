@@ -20,14 +20,19 @@ function key(userId: string, itemId: string): string {
  * observables du repository D1 (tri par echeance, cartes neuves en tete,
  * journal append-only).
  */
+/** Un item de test, éventuellement rattaché à un domaine. */
+export type SeedItem = LearningItemView & { readonly domainId?: string | null };
+
 export class InMemoryReviewRepository implements ReviewRepository {
   readonly #items = new Map<string, LearningItemView>();
+  readonly #domainOf = new Map<string, string | null>();
   readonly #states = new Map<string, SchedulingState>();
   readonly #logs: ReviewLog[] = [];
 
-  public constructor(items: readonly LearningItemView[] = []) {
+  public constructor(items: readonly SeedItem[] = []) {
     for (const item of items) {
-      this.#items.set(item.id, item);
+      this.#items.set(item.id, { id: item.id, type: item.type, front: item.front, back: item.back });
+      this.#domainOf.set(item.id, item.domainId ?? null);
     }
   }
 
@@ -46,8 +51,14 @@ export class InMemoryReviewRepository implements ReviewRepository {
     this.#states.set(key(userId, itemId), state);
   }
 
-  public findDue(userId: string, now: Date, limit: number): Promise<readonly ReviewCard[]> {
+  public findDue(
+    userId: string,
+    now: Date,
+    limit: number,
+    domainId?: string,
+  ): Promise<readonly ReviewCard[]> {
     const due = [...this.#items.values()]
+      .filter((item) => domainId === undefined || this.#domainOf.get(item.id) === domainId)
       .map((item): ReviewCard => ({ item, state: this.stateOf(userId, item.id) }))
       // Carte neuve (jamais planifiee) => due immediatement.
       .filter(({ state }) => state === null || state.due.getTime() <= now.getTime())
@@ -55,6 +66,22 @@ export class InMemoryReviewRepository implements ReviewRepository {
       .slice(0, limit);
 
     return Promise.resolve(due);
+  }
+
+  public dueCountsByDomain(userId: string, now: Date): Promise<ReadonlyMap<string, number>> {
+    const counts = new Map<string, number>();
+    for (const item of this.#items.values()) {
+      const domainId = this.#domainOf.get(item.id) ?? null;
+      if (domainId === null) {
+        continue;
+      }
+      const state = this.stateOf(userId, item.id);
+      if (state === null || state.due.getTime() <= now.getTime()) {
+        counts.set(domainId, (counts.get(domainId) ?? 0) + 1);
+      }
+    }
+
+    return Promise.resolve(counts);
   }
 
   public findCard(userId: string, itemId: string): Promise<ReviewCard | null> {

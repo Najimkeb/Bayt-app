@@ -5,21 +5,7 @@ import Link from 'next/link';
 import type { CSSProperties, ReactElement } from 'react';
 
 import type { LessonNodeState, PathLessonNode } from '@/lib/api/path-types';
-
-/** Couleur de nœud selon la couleur d'unité. */
-const UNIT_FILL: Record<string, string> = {
-  green: 'var(--color-feather-green)',
-  blue: 'var(--color-macaw)',
-  yellow: 'var(--color-bee)',
-  purple: '#a560e8',
-};
-
-const UNIT_SHADOW: Record<string, string> = {
-  green: 'var(--color-feather-green-shadow)',
-  blue: 'var(--color-macaw-shadow)',
-  yellow: 'var(--color-bee-shadow)',
-  purple: '#7d3fc0',
-};
+import { paletteFor } from '@/lib/domain-colors';
 
 /**
  * Un nœud du chemin : leçon terminée (coche), disponible (pulsation + badge
@@ -36,8 +22,7 @@ export function LessonNode({
   color: string;
 }): ReactElement {
   const reduceMotion = useReducedMotion();
-  const fill = UNIT_FILL[color] ?? UNIT_FILL.green;
-  const shadow = UNIT_SHADOW[color] ?? UNIT_SHADOW.green;
+  const { fill, shadow } = paletteFor(color);
 
   const label = `Leçon ${node.title} — ${STATE_LABEL[node.state]}`;
 

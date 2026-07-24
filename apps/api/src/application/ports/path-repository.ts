@@ -1,23 +1,40 @@
+/** Un domaine tel que la persistance le renvoie. */
+export interface DomainRow {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  readonly emoji: string;
+  /** Jeton de couleur d'accent (`DomainColor`), stocké en texte. */
+  readonly color: string;
+  readonly position: number;
+}
+
 /** Une leçon telle que le chemin la référence (id + titre). */
 export interface PathLessonRow {
   readonly id: string;
   readonly title: string;
 }
 
-/** Une unité et ses leçons, dans l'ordre du chemin. */
+/** Une unité et ses leçons, dans l'ordre du chemin (au sein d'un domaine). */
 export interface PathUnitRow {
   readonly id: string;
   readonly title: string;
-  readonly color: string;
   readonly lessons: readonly PathLessonRow[];
 }
 
 /**
- * Port de persistance du chemin de progression et de la complétion des leçons.
+ * Port de persistance du **catalogue** (domaines → unités → leçons) et de la
+ * complétion des leçons.
  */
 export interface PathRepository {
-  /** Unités ordonnées, chacune avec ses leçons ordonnées. */
-  findUnits(): Promise<readonly PathUnitRow[]>;
+  /** Domaines du catalogue, ordonnés par rang d'affichage. */
+  findDomains(): Promise<readonly DomainRow[]>;
+
+  /** Unités d'un domaine, ordonnées, chacune avec ses leçons ordonnées. */
+  findUnits(domainId: string): Promise<readonly PathUnitRow[]>;
+
+  /** Identifiants de leçons par domaine (pour la progression par domaine). */
+  lessonIdsByDomain(): Promise<ReadonlyMap<string, readonly string[]>>;
 
   /** Identifiants des leçons terminées par l'apprenant. */
   findCompletedLessonIds(userId: string): Promise<readonly string[]>;

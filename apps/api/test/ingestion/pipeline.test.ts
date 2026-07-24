@@ -50,6 +50,7 @@ describe('SubmitDocument', () => {
       filename: 'cours.md',
       contentType: 'text/markdown',
       bytes: encode('# Cours\n\nContenu.'),
+      domainId: null,
     });
 
     expect(doc.status).toBe('pending');
@@ -67,6 +68,7 @@ describe('SubmitDocument', () => {
         filename: 'slides.pptx',
         contentType: 'application/vnd.ms-powerpoint',
         bytes: encode('x'),
+        domainId: null,
       }),
     ).rejects.toBeInstanceOf(UnsupportedFormatError);
   });
@@ -79,6 +81,7 @@ describe('IngestDocument (consumer)', () => {
       filename: 'cours.md',
       contentType: 'text/markdown',
       bytes: encode('# Mémoire\n\nLe rappel actif renforce la mémoire à long terme.'),
+      domainId: null,
     });
 
     await ingest.execute(doc.id);
@@ -99,6 +102,7 @@ describe('IngestDocument (consumer)', () => {
       filename: 'cours.txt',
       contentType: 'text/plain',
       bytes: encode('contenu'),
+      domainId: null,
     });
 
     // On simule un texte manquant en donnant au consumer un stockage vide.

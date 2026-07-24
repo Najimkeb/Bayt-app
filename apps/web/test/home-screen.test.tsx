@@ -3,18 +3,21 @@ import { render, screen } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { DomainList } from '@/lib/api/domain-types';
 import type { LearningPath } from '@/lib/api/path-types';
 import type { DailyStatus } from '@/lib/api/progress-types';
 import type { DueQueue } from '@/lib/api/types';
 
-const fetchPath = vi.fn<() => Promise<LearningPath>>();
+const fetchDomains = vi.fn<() => Promise<DomainList>>();
+const fetchPath = vi.fn<(domainId: string) => Promise<LearningPath>>();
 const fetchDueQueue = vi.fn<() => Promise<DueQueue>>();
 const fetchProgress = vi.fn<() => Promise<DailyStatus>>();
 
 vi.mock('@/lib/api/client', () => ({
   DEMO_USER_ID: 'demo',
   API_URL: 'http://localhost:8787',
-  fetchPath: () => fetchPath(),
+  fetchDomains: () => fetchDomains(),
+  fetchPath: (domainId: string) => fetchPath(domainId),
   fetchDueQueue: () => fetchDueQueue(),
   fetchProgress: () => fetchProgress(),
 }));
@@ -23,12 +26,27 @@ vi.mock('@/lib/auth/use-user-id', () => ({ useUserId: () => 'demo' }));
 
 const { HomeScreen } = await import('@/components/home/home-screen');
 
+const DOMAINS: DomainList = {
+  domains: [
+    {
+      id: 'dom_apprendre',
+      name: 'Apprendre à apprendre',
+      description: 'Les fondations de la mémorisation.',
+      emoji: '🧠',
+      color: 'green',
+      order: 0,
+      lessonsCompleted: 1,
+      lessonsTotal: 3,
+      cardsDue: 0,
+    },
+  ],
+};
+
 const PATH: LearningPath = {
   units: [
     {
       id: 'u1',
       title: 'Fondamentaux de la mémorisation',
-      color: 'green',
       lessons: [
         { id: 'lesson_demo', title: 'Les bases', state: 'completed' },
         { id: 'lesson_srs', title: 'Répétition espacée', state: 'available' },
@@ -78,6 +96,7 @@ function renderHome(): void {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fetchDomains.mockResolvedValue(DOMAINS);
   fetchPath.mockResolvedValue(PATH);
   fetchProgress.mockResolvedValue(EMPTY_PROGRESS);
   fetchDueQueue.mockResolvedValue(due(3));

@@ -1,3 +1,4 @@
+import type { DomainList } from './domain-types';
 import type { DocumentCards, DocumentDto, DocumentList } from './document-types';
 import type { AnswerResult, ExerciseAnswer, Lesson } from './lesson-types';
 import type { LearningPath } from './path-types';
@@ -50,9 +51,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-/** Cartes a reviser maintenant. */
-export function fetchDueQueue(limit = 20): Promise<DueQueue> {
-  return request<DueQueue>(`/reviews/queue?limit=${String(limit)}`);
+/**
+ * Cartes a reviser maintenant.
+ *
+ * `domainId` filtre la file sur un domaine ; absent = tous domaines confondus.
+ */
+export function fetchDueQueue(limit = 20, domainId?: string): Promise<DueQueue> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (domainId !== undefined) {
+    params.set('domainId', domainId);
+  }
+
+  return request<DueQueue>(`/reviews/queue?${params.toString()}`);
 }
 
 /** Intervalles qui seraient appliques pour chacune des 4 notes. */
@@ -111,9 +121,13 @@ export function incrementProgress(input: {
  * un `Content-Type: application/json`. Ici on laisse le navigateur poser le
  * `Content-Type` et sa frontière (boundary) multipart lui-même.
  */
-export async function uploadDocument(file: File): Promise<DocumentDto> {
+export async function uploadDocument(file: File, domainId?: string): Promise<DocumentDto> {
   const form = new FormData();
   form.set('file', file);
+  // Domaine de rattachement choisi au dépôt (les cartes en héritent).
+  if (domainId !== undefined && domainId !== '') {
+    form.set('domainId', domainId);
+  }
 
   let response: Response;
   try {
@@ -177,14 +191,19 @@ export async function deleteDocument(id: string): Promise<void> {
   }
 }
 
-/** Chemin de progression : unités, leçons et leur état. */
-export function fetchPath(): Promise<LearningPath> {
-  return request<LearningPath>('/path');
+/** Catalogue : domaines avec la progression de l'apprenant. */
+export function fetchDomains(): Promise<DomainList> {
+  return request<DomainList>('/domains');
 }
 
-/** Marque une leçon terminée (débloque la suivante) ; renvoie le chemin à jour. */
-export function markLessonComplete(lessonId: string): Promise<LearningPath> {
-  return request<LearningPath>(`/lessons/${encodeURIComponent(lessonId)}/complete`, {
+/** Chemin de progression d'un domaine : ses unités, leçons et leur état. */
+export function fetchPath(domainId: string): Promise<LearningPath> {
+  return request<LearningPath>(`/path?domainId=${encodeURIComponent(domainId)}`);
+}
+
+/** Marque une leçon terminée (débloque la suivante). L'UI réinvalide le chemin. */
+export function markLessonComplete(lessonId: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(`/lessons/${encodeURIComponent(lessonId)}/complete`, {
     method: 'POST',
     body: JSON.stringify({}),
   });

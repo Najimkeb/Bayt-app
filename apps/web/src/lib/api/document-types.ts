@@ -20,6 +20,8 @@ export interface DocumentDto {
   readonly error: string | null;
   /** Nombre de cartes générées, une fois `ready`. */
   readonly cardCount: number;
+  /** Domaine de rattachement choisi au dépôt (`null` = non catégorisé). */
+  readonly domainId: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 }

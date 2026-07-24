@@ -4,12 +4,14 @@ import { Mascot } from '@bayt/ui';
 import Link from 'next/link';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 
+import { useDomains } from '@/lib/api/domain-queries';
 import type { DocumentDto } from '@/lib/api/document-types';
 import { useDeleteDocument, useDocuments, useUploadDocument } from '@/lib/api/document-queries';
 import { useUserId } from '@/lib/auth/use-user-id';
 
 import { CardPreviewLayer } from './card-preview';
 import { DocumentRow } from './document-row';
+import { DomainPicker } from './domain-picker';
 import { statusAnnouncement } from './document-status';
 import { Dropzone } from './dropzone';
 
@@ -19,9 +21,17 @@ import { Dropzone } from './dropzone';
  * Un document déposé apparaît aussitôt dans la liste (statut `pending`), puis
  * son avancement est suivi par polling léger jusqu'à `ready`/`failed`. Un
  * document prêt s'ouvre pour prévisualiser ses cartes et lancer une révision.
+ *
+ * Au dépôt, l'apprenant choisit le **domaine** de rattachement : les cartes
+ * générées en héritent, ce qui alimente la révision par domaine.
  */
-export function LibraryScreen(): ReactElement {
+export function LibraryScreen({
+  initialDomainId = null,
+}: {
+  initialDomainId?: string | null;
+}): ReactElement {
   const userId = useUserId();
+  const domains = useDomains(userId);
   const documents = useDocuments(userId);
   const upload = useUploadDocument(userId);
   const remove = useDeleteDocument(userId);
@@ -29,8 +39,11 @@ export function LibraryScreen(): ReactElement {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<DocumentDto | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  /** Domaine de rattachement du prochain dépôt (présélectionné via `?domain=`). */
+  const [domainId, setDomainId] = useState<string | null>(initialDomainId);
 
   const list = documents.data?.documents ?? [];
+  const domainList = domains.data?.domains ?? [];
 
   // Annonce aux lecteurs d'écran les documents qui viennent d'aboutir
   // (`ready`/`failed`), en comparant au statut précédemment vu.
@@ -51,11 +64,14 @@ export function LibraryScreen(): ReactElement {
 
   function handleFile(file: File): void {
     setUploadError(null);
-    upload.mutate(file, {
-      onError: (error) => {
-        setUploadError(error.message);
+    upload.mutate(
+      { file, domainId },
+      {
+        onError: (error) => {
+          setUploadError(error.message);
+        },
       },
-    });
+    );
   }
 
   const isEmpty = documents.isSuccess && list.length === 0;
@@ -76,6 +92,15 @@ export function LibraryScreen(): ReactElement {
           ← Accueil
         </Link>
       </div>
+
+      {domainList.length > 0 && (
+        <DomainPicker
+          domains={domainList}
+          value={domainId}
+          onChange={setDomainId}
+          disabled={upload.isPending}
+        />
+      )}
 
       <Dropzone onFile={handleFile} onReject={setUploadError} busy={upload.isPending} />
 
