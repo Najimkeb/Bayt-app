@@ -7,6 +7,12 @@
   "compatibility_flags": ["nodejs_compat"],
   // Assets statiques générés par OpenNext (build Next.js).
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+
+  // Service Binding vers le Worker API : le proxy `/api/*` (Route Handler) l'appelle
+  // en **worker-to-worker**. Indispensable car deux Workers du même `*.workers.dev`
+  // ne peuvent pas se joindre par leur URL publique (erreur 1042).
+  "services": [{ "binding": "API", "service": "bayt-api-production" }],
+
   "observability": { "enabled": true }
   // Le domaine personnalisé `bayt.app` (apex) + la redirection `www` → apex sont
   // attachés manuellement dans le dashboard (Workers & Pages → bayt-web-production

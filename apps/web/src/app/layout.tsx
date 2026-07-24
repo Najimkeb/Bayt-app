@@ -28,6 +28,22 @@ export const metadata: Metadata = {
   title: 'BAYT — Réviser',
   description:
     'BAYT — apprendre pour de bon : rappel actif, répétition espacée et un mentor qui vous accompagne.',
+  applicationName: 'BAYT',
+  manifest: '/manifest.webmanifest',
+  // Ouverture plein écran depuis l'écran d'accueil iOS (sans barre Safari).
+  appleWebApp: {
+    capable: true,
+    title: 'BAYT',
+    statusBarStyle: 'default',
+  },
+  // Icône d'accueil : fond plein (le renard sur le vert de la charte), jamais
+  // transparente — iOS rendrait la transparence en noir.
+  icons: {
+    icon: [{ url: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+  // Équivalent standardisé de `apple-mobile-web-app-capable` (Chrome/Android).
+  other: { 'mobile-web-app-capable': 'yes' },
 };
 
 export const viewport: Viewport = {

@@ -23,16 +23,25 @@ Node ≥ 20 requis. Le gestionnaire de paquets est **pnpm** (workspaces), éping
 
 ## Déploiement en production (Cloudflare)
 
-BAYT est déployé en **deux Workers** sur le domaine `bayt.app` :
+BAYT est déployé en **deux Workers** sur `*.workers.dev` (sans domaine personnalisé) :
 
-| Worker | Rôle | Domaine public | URL technique |
-|--------|------|----------------|---------------|
-| `bayt-web-production` | Front Next.js (adaptateur **OpenNext**) | `bayt.app` (apex) + `www` → apex | `bayt-web-production.<compte>.workers.dev` |
-| `bayt-api-production` | API Hono + auth | `api.bayt.app` | `bayt-api-production.<compte>.workers.dev` |
+| Worker | Rôle | URL |
+|--------|------|-----|
+| `bayt-web-production` | Front Next.js (adaptateur **OpenNext**) | `https://bayt-web-production.<compte>.workers.dev` |
+| `bayt-api-production` | API Hono + auth | (privé — joint via Service Binding) |
 
-Front et API partagent le **domaine racine `bayt.app`** : le cookie de session
-Better Auth est posé sur `Domain=.bayt.app` (`SameSite=Lax`, `Secure`), donc valable
-sur les deux sous-domaines — pas de déconnexion en boucle (cf. `apps/api/src/auth`).
+**Montage « même origine ».** Deux sous-domaines `*.workers.dev` sont *cross-site* :
+un cookie de session posé par l'API ne serait pas partagé avec le front (déconnexion
+en boucle). On sert donc l'API **sous l'origine du front** : le navigateur ne parle
+qu'au front, qui relaie `/api/*` vers le Worker API.
+
+- Le proxy est un **Route Handler** (`apps/web/src/app/api/[...path]/route.ts`), **pas**
+  un `rewrites()` Next (OpenNext ne proxifie pas les rewrites externes).
+- Il appelle l'API par un **Service Binding** (`API` → `bayt-api-production`), car deux
+  Workers d'un même `*.workers.dev` ne peuvent pas se joindre par leur URL publique
+  (erreur 1042).
+- Better Auth : `baseURL`/`trustedOrigins` = l'URL du front ; cookie **host-only**
+  (`Secure`, `SameSite=Lax`, **sans `Domain=`**) → **first-party** sur le front.
 
 ### Ressources de production (plan gratuit)
 
@@ -78,30 +87,36 @@ wrangler d1 execute bayt-prod --remote --env production --file=./seed/demo.sql  
 wrangler deploy --env production
 ```
 
-Les URLs de prod (`vars` de `env.production` dans `apps/api/wrangler.jsonc`) :
-`BETTER_AUTH_URL=https://api.bayt.app`, `WEB_ORIGIN=https://bayt.app` (CORS verrouillé
-dessus, pas de wildcard), `COOKIE_DOMAIN=.bayt.app`.
+Les `vars` de `env.production` (dans `apps/api/wrangler.jsonc`) pointent sur **l'URL
+du front** (origine publique vue par le navigateur) :
+`BETTER_AUTH_URL=WEB_ORIGIN=https://bayt-web-production.<compte>.workers.dev`.
+**Pas de `COOKIE_DOMAIN`** → cookie host-only (first-party). Aucune référence à un
+domaine personnalisé.
 
 ### Déployer le front
 
-`NEXT_PUBLIC_API_URL` est **figé au build** (bundle client) :
+`NEXT_PUBLIC_API_URL=/api` est **figé au build** (chemin relatif → proxy même origine) :
 
 ```bash
 cd apps/web
-NEXT_PUBLIC_API_URL=https://api.bayt.app pnpm exec opennextjs-cloudflare build
-wrangler deploy
+NEXT_PUBLIC_API_URL=/api pnpm exec opennextjs-cloudflare build
+wrangler deploy   # Service Binding `API` → bayt-api-production (cf. wrangler.jsonc)
 ```
 
-### Domaines personnalisés (dashboard)
+En **local** (`pnpm dev`), `NEXT_PUBLIC_API_URL` n'est pas défini → le front vise
+directement `http://localhost:8787` (CORS), sans proxy.
 
-Une fois les Workers déployés, dans **Cloudflare → Workers & Pages** :
+### PWA (écran d'accueil iPhone)
 
-- `bayt-api-production` → **Custom Domains** → ajouter `api.bayt.app`
-- `bayt-web-production` → **Custom Domains** → ajouter `bayt.app` (apex)
-- `www.bayt.app` → une **Redirect Rule** vers `https://bayt.app` (301)
+Manifest (`apps/web/src/app/manifest.ts`, `display: standalone`) + balises iOS
+(`appleWebApp` dans `layout.tsx`) → l'app s'ouvre **plein écran**, sans barre Safari.
+Icônes (`public/{apple-touch-icon,icon-192,icon-512}.png`) à **fond plein** — iOS
+rend la transparence en noir, donc jamais de PNG transparent. Régénérées depuis la
+mascotte via un petit script PIL (fond vert de la charte).
 
-La zone `bayt.app` doit être active sur le compte ; Cloudflare crée les
-enregistrements DNS et le certificat automatiquement.
+### URL publique
+
+**https://bayt-web-production.najimkeb31.workers.dev**
 
 ## Structure (cible)
 

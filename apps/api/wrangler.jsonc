@@ -62,14 +62,14 @@
   // identifiants, le domaine personnalisé et les URLs de prod.
   "env": {
     "production": {
+      // Montage « même origine » : le navigateur ne parle qu'au front, qui
+      // relaie `/api/*` vers ce Worker. `BETTER_AUTH_URL` = l'origine publique
+      // vue par le navigateur = le front. Pas de `COOKIE_DOMAIN` → cookie
+      // host-only (first-party) sur l'hôte du front. Aucune référence à bayt.app.
       "vars": {
-        "WEB_ORIGIN": "https://bayt.app",
-        "BETTER_AUTH_URL": "https://api.bayt.app",
-        "COOKIE_DOMAIN": ".bayt.app"
+        "WEB_ORIGIN": "https://bayt-web-production.najimkeb31.workers.dev",
+        "BETTER_AUTH_URL": "https://bayt-web-production.najimkeb31.workers.dev"
       },
-      // Le domaine personnalisé `api.bayt.app` est attaché manuellement dans le
-      // dashboard (Workers & Pages → bayt-api-production → Custom Domains). Les
-      // `vars` ci-dessus pointent déjà vers les URLs de prod finales.
       "d1_databases": [
         {
           "binding": "DB",
