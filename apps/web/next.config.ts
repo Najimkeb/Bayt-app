@@ -13,6 +13,9 @@ const config: NextConfig = {
   /** Le paquet de composants partages est compile depuis le workspace. */
   transpilePackages: ['@bayt/ui'],
   turbopack: { root: monorepoRoot },
+  // Cache des pages : contrôlé via `public/_headers` (Workers Assets), pas ici —
+  // OpenNext sert le HTML statique par le binding Assets, qui court-circuite
+  // `headers()` de Next.
 };
 
 export default config;
