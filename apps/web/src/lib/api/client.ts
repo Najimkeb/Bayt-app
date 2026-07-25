@@ -2,6 +2,7 @@ import type { DomainList } from './domain-types';
 import type { DocumentCards, DocumentDto, DocumentList } from './document-types';
 import type { AnswerResult, ExerciseAnswer, Lesson } from './lesson-types';
 import type { LearningPath } from './path-types';
+import type { ProfileData } from './profile-types';
 import type { DailyStatus, IncrementResult, XpEvent } from './progress-types';
 import type { DueQueue, Preview, ReviewGrade, ReviewResult } from './types';
 
@@ -101,6 +102,19 @@ export function submitAnswer(input: {
 /** Progression de gamification du jour (XP, objectif, série). */
 export function fetchProgress(timezone: string): Promise<DailyStatus> {
   return request<DailyStatus>(`/progress?timezone=${encodeURIComponent(timezone)}`);
+}
+
+/** Profil + statistiques agrégées (identité, séries, santé mémoire, activité). */
+export function fetchProfile(timezone: string): Promise<ProfileData> {
+  return request<ProfileData>(`/profile?timezone=${encodeURIComponent(timezone)}`);
+}
+
+/** Change l'objectif quotidien (cible d'XP/jour) ; renvoie la vue du jour à jour. */
+export function setDailyGoal(dailyGoal: number, timezone: string): Promise<DailyStatus> {
+  return request<DailyStatus>('/progress/goal', {
+    method: 'POST',
+    body: JSON.stringify({ dailyGoal, timezone }),
+  });
 }
 
 /** Enregistre un gain d'XP (l'XP est calculé côté domaine). */

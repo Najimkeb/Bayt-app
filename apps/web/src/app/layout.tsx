@@ -4,7 +4,7 @@ import type { ReactElement, ReactNode } from 'react';
 
 import { FocusSound } from '@/components/audio/focus-sound';
 import { AuthGate } from '@/components/auth/auth-gate';
-import { LogoutButton } from '@/components/auth/logout-button';
+import { ProfileLink } from '@/components/profile/profile-link';
 import { ProgressHeader } from '@/components/progress/progress-header';
 import { ThemeToggle, themeInitScript } from '@/components/theme-toggle';
 
@@ -90,9 +90,9 @@ export default function RootLayout({ children }: { children: ReactNode }): React
               </span>
               <div className="flex items-center gap-2 sm:gap-4">
                 <ProgressHeader />
-                <LogoutButton />
                 <FocusSound />
                 <ThemeToggle />
+                <ProfileLink />
               </div>
             </header>
 

@@ -9,9 +9,11 @@ import {
 } from '../application/errors.js';
 import type { DocumentRepository } from '../application/ports/document-repository.js';
 import type { DocumentStorage } from '../application/ports/document-storage.js';
+import type { IdentityRepository } from '../application/ports/identity-repository.js';
 import type { IngestionQueue } from '../application/ports/ingestion-queue.js';
 import type { LessonRepository } from '../application/ports/lesson-repository.js';
 import type { PathRepository } from '../application/ports/path-repository.js';
+import type { ProfileStatsRepository } from '../application/ports/profile-stats-repository.js';
 import type { ProgressRepository } from '../application/ports/progress-repository.js';
 import type { ReviewRepository } from '../application/ports/review-repository.js';
 import { CompleteLesson } from '../application/use-cases/complete-lesson.js';
@@ -23,9 +25,11 @@ import { GetDomains } from '../application/use-cases/get-domains.js';
 import { GetDueQueue } from '../application/use-cases/get-due-queue.js';
 import { GetLesson } from '../application/use-cases/get-lesson.js';
 import { GetPath } from '../application/use-cases/get-path.js';
+import { GetProfile, ProfileNotFoundError } from '../application/use-cases/get-profile.js';
 import { GetProgress } from '../application/use-cases/get-progress.js';
 import { IncrementProgress } from '../application/use-cases/increment-progress.js';
 import { PreviewReview } from '../application/use-cases/preview-review.js';
+import { SetDailyGoal } from '../application/use-cases/set-daily-goal.js';
 import { SubmitExerciseAnswer } from '../application/use-cases/submit-exercise-answer.js';
 import { SubmitReview } from '../application/use-cases/submit-review.js';
 import { presentAnswerResult, presentLesson } from './lesson-presenters.js';
@@ -37,6 +41,7 @@ import {
   pathQuerySchema,
   previewQuerySchema,
   progressQuerySchema,
+  setDailyGoalBodySchema,
   submitAnswerBodySchema,
   submitReviewBodySchema,
 } from './schemas.js';
@@ -69,6 +74,14 @@ export interface AppDependencies {
   readonly progressRepository?: ProgressRepository;
   /** Persistance du chemin ; les routes `/path` ne sont montées que si fournie. */
   readonly pathRepository?: PathRepository;
+  /**
+   * Lecture d'identité + agrégats de stats. La route `/profile` n'est montée que
+   * si les deux sont fournis **et** `progressRepository` l'est aussi.
+   */
+  readonly identityRepository?: IdentityRepository;
+  readonly profileStatsRepository?: ProfileStatsRepository;
+  /** Emails administrateurs (config) : affichent le lien `/admin` dans le profil. */
+  readonly adminEmails?: readonly string[];
   /**
    * Pipeline d'ingestion. Les routes `/documents` ne sont montées que si les
    * trois dépendances (persistance, stockage, file) sont fournies.
@@ -112,6 +125,9 @@ export function createApp({
   lessonRepository,
   progressRepository,
   pathRepository,
+  identityRepository,
+  profileStatsRepository,
+  adminEmails = [],
   documentRepository,
   documentStorage,
   ingestionQueue,
@@ -300,6 +316,7 @@ export function createApp({
   if (progressRepository !== undefined) {
     const getProgress = new GetProgress(progressRepository);
     const incrementProgress = new IncrementProgress(progressRepository);
+    const setDailyGoal = new SetDailyGoal(progressRepository);
 
     /** Progression de gamification du jour (XP, objectif, série). */
     app.get('/progress', async (context) => {
@@ -327,6 +344,62 @@ export function createApp({
       const result = await incrementProgress.execute(context.get('userId'), event, now, timezone);
 
       return context.json(result, 201);
+    });
+
+    /** Modifie l'objectif quotidien (cible d'XP/jour) et renvoie la vue du jour. */
+    app.post('/progress/goal', async (context) => {
+      const body = setDailyGoalBodySchema.safeParse(await readJson(context.req.raw));
+
+      if (!body.success) {
+        return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
+      }
+
+      const status = await setDailyGoal.execute(
+        context.get('userId'),
+        body.data.dailyGoal,
+        clock(),
+        body.data.timezone,
+      );
+
+      return context.json(status);
+    });
+  }
+
+  if (
+    identityRepository !== undefined &&
+    profileStatsRepository !== undefined &&
+    progressRepository !== undefined
+  ) {
+    const getProfile = new GetProfile(
+      identityRepository,
+      progressRepository,
+      profileStatsRepository,
+      new Set(adminEmails.map((email) => email.toLowerCase())),
+    );
+
+    /** Profil + statistiques agrégées (identité, séries, santé mémoire, activité). */
+    app.get('/profile', async (context) => {
+      const query = progressQuerySchema.safeParse({ timezone: context.req.query('timezone') });
+
+      if (!query.success) {
+        return context.json({ error: 'invalid_request', details: query.error.issues }, 400);
+      }
+
+      try {
+        const profile = await getProfile.execute(
+          context.get('userId'),
+          clock(),
+          query.data.timezone,
+        );
+
+        return context.json(profile);
+      } catch (error) {
+        if (error instanceof ProfileNotFoundError) {
+          return context.json({ error: 'profile_not_found' }, 404);
+        }
+
+        throw error;
+      }
     });
   }
 

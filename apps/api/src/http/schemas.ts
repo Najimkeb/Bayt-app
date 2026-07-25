@@ -68,6 +68,12 @@ export const progressQuerySchema = z.object({
   timezone,
 });
 
+/** Objectif quotidien : borné pour rester atteignable et non absurde. */
+export const setDailyGoalBodySchema = z.object({
+  dailyGoal: z.coerce.number().int().min(10).max(1000),
+  timezone,
+});
+
 /** Événement porteur d'XP, discriminé par `type` (aligné sur `XpEvent`). */
 const xpEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('review'), grade: z.enum(REVIEW_GRADES) }),
