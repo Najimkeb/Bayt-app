@@ -82,6 +82,27 @@ export function submitReview(itemId: string, grade: ReviewGrade): Promise<Review
   });
 }
 
+/** Une révision faite hors-ligne, à rejouer (id client + instant réel). */
+export interface OfflineReviewInput {
+  readonly clientId: string;
+  readonly itemId: string;
+  readonly grade: ReviewGrade;
+  readonly reviewedAt: string;
+}
+
+/**
+ * Rejoue la file de révisions hors-ligne. **Idempotent** : renvoie les ids
+ * clients durablement pris en compte, que le client purge ensuite.
+ */
+export function replayReviews(
+  reviews: readonly OfflineReviewInput[],
+): Promise<{ settledClientIds: string[] }> {
+  return request<{ settledClientIds: string[] }>('/reviews/replay', {
+    method: 'POST',
+    body: JSON.stringify({ reviews }),
+  });
+}
+
 /** Une leçon jouable (exercices sans leurs solutions). */
 export function fetchLesson(lessonId: string): Promise<Lesson> {
   return request<Lesson>(`/lessons/${encodeURIComponent(lessonId)}`);

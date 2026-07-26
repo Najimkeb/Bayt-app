@@ -28,6 +28,8 @@ export interface SchedulingStateDto {
   readonly lastReviewedAt: string | null;
   readonly reps: number;
   readonly lapses: number;
+  /** Palier d'apprentissage — nécessaire pour rejouer FSRS côté client (hors-ligne). */
+  readonly learningStep: number;
 }
 
 export interface DueCard {

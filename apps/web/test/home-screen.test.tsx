@@ -80,6 +80,7 @@ function due(count: number): DueQueue {
         lastReviewedAt: null,
         reps: 0,
         lapses: 0,
+        learningStep: 0,
       },
       retrievability: 0,
     })),

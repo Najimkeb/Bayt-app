@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { FocusSound } from '@/components/audio/focus-sound';
 import { AuthGate } from '@/components/auth/auth-gate';
 import { BottomNav } from '@/components/nav/bottom-nav';
+import { SyncIndicator } from '@/components/offline/sync-indicator';
+import { RegisterServiceWorker } from '@/components/offline/register-sw';
 import { ProfileLink } from '@/components/profile/profile-link';
 import { ProgressHeader } from '@/components/progress/progress-header';
 import { ThemeToggle, themeInitScript } from '@/components/theme-toggle';
@@ -73,6 +75,7 @@ export default function RootLayout({ children }: { children: ReactNode }): React
       </head>
       <body className="min-h-dvh overflow-x-hidden antialiased">
         <Providers>
+          <RegisterServiceWorker />
           {/* Lien d'évitement — premier arrêt de la navigation clavier. */}
           <a
             href="#contenu"
@@ -97,6 +100,7 @@ export default function RootLayout({ children }: { children: ReactNode }): React
                 </span>
               </Link>
               <div className="flex items-center gap-2 sm:gap-4">
+                <SyncIndicator />
                 <ProgressHeader />
                 <FocusSound />
                 <ThemeToggle />

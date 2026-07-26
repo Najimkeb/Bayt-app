@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactElement } from 're
 
 import { useIncrementProgress } from '@/lib/api/progress-queries';
 import { useDueQueue, usePreview, useSubmitReview } from '@/lib/api/queries';
+import { useSync } from '@/lib/offline/sync-provider';
 import { useUserId } from '@/lib/auth/use-user-id';
 import type { ReviewGrade } from '@/lib/api/types';
 import { formatInterval } from '@/lib/format-interval';
@@ -43,6 +44,7 @@ export function ReviewSession({ domainId }: { domainId?: string | undefined } = 
   const queue = useDueQueue(userId, domainId);
   const submit = useSubmitReview(userId, domainId);
   const increment = useIncrementProgress(userId);
+  const { online, pending } = useSync();
 
   const [revealed, setRevealed] = useState(false);
   const [lastGrade, setLastGrade] = useState<ReviewGrade | null>(null);
@@ -75,7 +77,7 @@ export function ReviewSession({ domainId }: { domainId?: string | undefined } = 
 
   const done = Math.max(0, total - remaining);
 
-  const preview = usePreview(userId, itemId, revealed);
+  const preview = usePreview(userId, card, revealed);
 
   // Chaque nouvelle carte repart cachée.
   useEffect(() => {
@@ -89,7 +91,7 @@ export function ReviewSession({ domainId }: { domainId?: string | undefined } = 
 
   const grade = useCallback(
     (value: ReviewGrade) => {
-      if (itemId === null || submit.isPending) {
+      if (card === null || submit.isPending) {
         return;
       }
 
@@ -103,12 +105,16 @@ export function ReviewSession({ domainId }: { domainId?: string | undefined } = 
       });
 
       submit.mutate(
-        { itemId, grade: value },
+        { card, grade: value },
         {
           onSuccess: (result) => {
             setFeedback(`Revu. Prochain passage dans ${formatInterval(result.review.intervalMs)}.`);
 
-            // Chaque carte révisée rapporte de l'XP (gamification, distincte de FSRS).
+            // XP (gamification, distincte de FSRS) : uniquement en ligne — la
+            // motivation n'est pas critique et reste un service en ligne.
+            if (typeof navigator !== 'undefined' && !navigator.onLine) {
+              return;
+            }
             increment.mutate(
               { type: 'review', grade: value },
               {
@@ -130,7 +136,7 @@ export function ReviewSession({ domainId }: { domainId?: string | undefined } = 
         },
       );
     },
-    [itemId, submit, increment],
+    [card, submit, increment],
   );
 
   /** Raccourcis clavier : Espace révèle, 1 à 4 notent. */
@@ -214,6 +220,19 @@ export function ReviewSession({ domainId }: { domainId?: string | undefined } = 
           <SessionProgress done={done} total={total} remaining={remaining} />
         </div>
       </div>
+
+      {/* Rassurance hors-ligne : la révision continue, les notes sont sûres. */}
+      {(!online || pending > 0) && (
+        <p
+          role="status"
+          aria-live="polite"
+          className="rounded-[var(--radius-button)] border-2 border-bee/40 bg-bee/10 px-4 py-2 text-center text-sm font-bold text-[#8a6d00]"
+        >
+          {online
+            ? `${String(pending)} révision${pending > 1 ? 's' : ''} en cours de synchronisation…`
+            : 'Hors-ligne — tes révisions sont enregistrées et seront synchronisées.'}
+        </p>
+      )}
 
       <AnimatePresence mode="wait">
         <motion.div

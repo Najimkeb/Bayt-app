@@ -1,4 +1,4 @@
-import { and, asc, eq, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 
 import type {
@@ -107,9 +107,29 @@ export class D1ReviewRepository implements ReviewRepository {
    * `batch` est atomique cote D1 : l'etat et le journal ne peuvent pas
    * diverger. Le log est insere sans jamais etre mis a jour (append-only).
    */
-  public async commitReview({ userId, itemId, state, log }: ReviewCommit): Promise<void> {
-    const row = toSchedulingStateRow(userId, itemId, state, log.reviewedAt);
+  public async commitReview({
+    userId,
+    itemId,
+    state,
+    log,
+    clientId = null,
+    advanceState = true,
+  }: ReviewCommit): Promise<void> {
+    const logInsert = this.db
+      .insert(reviewLogs)
+      .values(toReviewLogRow(this.newId(), userId, itemId, log, clientId));
 
+    // `advanceState === false` : révision hors-ligne plus ancienne qu'un état
+    // déjà à jour (conflit multi-appareils) → on journalise SANS régresser
+    // l'état FSRS courant (le plus récent l'emporte). Sinon : upsert de l'état
+    // + log, atomiquement (les deux ne divergent jamais).
+    if (!advanceState) {
+      await logInsert;
+
+      return;
+    }
+
+    const row = toSchedulingStateRow(userId, itemId, state, log.reviewedAt);
     await this.db.batch([
       this.db
         .insert(schedulingState)
@@ -118,8 +138,24 @@ export class D1ReviewRepository implements ReviewRepository {
           target: [schedulingState.userId, schedulingState.itemId],
           set: row,
         }),
-      this.db.insert(reviewLogs).values(toReviewLogRow(this.newId(), userId, itemId, log)),
+      logInsert,
     ]);
+  }
+
+  public async findAppliedClientIds(
+    userId: string,
+    clientIds: readonly string[],
+  ): Promise<ReadonlySet<string>> {
+    if (clientIds.length === 0) {
+      return new Set();
+    }
+
+    const rows = await this.db
+      .select({ clientId: reviewLogs.clientId })
+      .from(reviewLogs)
+      .where(and(eq(reviewLogs.userId, userId), inArray(reviewLogs.clientId, [...clientIds])));
+
+    return new Set(rows.map((r) => r.clientId).filter((id): id is string => id !== null));
   }
 }
 

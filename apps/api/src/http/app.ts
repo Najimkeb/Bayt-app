@@ -60,6 +60,7 @@ import { IncrementProgress } from '../application/use-cases/increment-progress.j
 import { PreviewReview } from '../application/use-cases/preview-review.js';
 import { SetDailyGoal } from '../application/use-cases/set-daily-goal.js';
 import { SubmitExerciseAnswer } from '../application/use-cases/submit-exercise-answer.js';
+import { ReplayReviews } from '../application/use-cases/replay-reviews.js';
 import { SubmitReview } from '../application/use-cases/submit-review.js';
 import { presentAnswerResult, presentLesson } from './lesson-presenters.js';
 import { presentDueCard, presentPreview, presentReviewResult } from './presenters.js';
@@ -81,6 +82,7 @@ import {
   resetPasswordBodySchema,
   setDailyGoalBodySchema,
   submitAnswerBodySchema,
+  replayReviewsBodySchema,
   submitReviewBodySchema,
 } from './schemas.js';
 
@@ -211,6 +213,7 @@ export function createApp({
   const getDueQueue = new GetDueQueue(repository, scheduler);
   const previewReview = new PreviewReview(repository, scheduler);
   const submitReview = new SubmitReview(repository, scheduler);
+  const replayReviews = new ReplayReviews(repository, scheduler);
 
   const app = new Hono<{ Variables: Variables }>();
 
@@ -329,6 +332,30 @@ export function createApp({
 
       throw error;
     }
+  });
+
+  /**
+   * Rejoue la file de révisions faites **hors-ligne** (synchronisation).
+   * Idempotent (id client) et chronologique — cf. `ReplayReviews`.
+   */
+  app.post('/reviews/replay', async (context) => {
+    const body = replayReviewsBodySchema.safeParse(await readJson(context.req.raw));
+
+    if (!body.success) {
+      return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
+    }
+
+    const result = await replayReviews.execute(
+      context.get('userId'),
+      body.data.reviews.map((r) => ({
+        clientId: r.clientId,
+        itemId: r.itemId,
+        grade: r.grade,
+        reviewedAt: new Date(r.reviewedAt),
+      })),
+    );
+
+    return context.json(result);
   });
 
   if (lessonRepository !== undefined) {

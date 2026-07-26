@@ -31,6 +31,15 @@ export interface ReviewCommit {
   readonly state: SchedulingState;
   /** Trace de la revision (ajoutee, jamais modifiee). */
   readonly log: ReviewLog;
+  /** Id client (révision hors-ligne) pour l'idempotence ; `null` = en ligne. */
+  readonly clientId?: string | null;
+  /**
+   * Faire avancer l'etat de planification ? `false` = **journaliser sans**
+   * ecraser l'etat courant (cas où une révision plus récente existe déjà sur un
+   * autre appareil : on garde le log mais on ne régresse pas l'état FSRS).
+   * Défaut : `true`.
+   */
+  readonly advanceState?: boolean;
 }
 
 /**
@@ -64,4 +73,13 @@ export interface ReviewRepository {
    * Les deux ne doivent jamais diverger.
    */
   commitReview(commit: ReviewCommit): Promise<void>;
+
+  /**
+   * Parmi `clientIds`, ceux **déjà appliqués** (log hors-ligne existant). Sert à
+   * l'idempotence du rejeu : on ne réapplique jamais un log déjà encaissé.
+   */
+  findAppliedClientIds(
+    userId: string,
+    clientIds: readonly string[],
+  ): Promise<ReadonlySet<string>>;
 }

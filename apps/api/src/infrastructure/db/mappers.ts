@@ -53,6 +53,7 @@ export function toReviewLogRow(
   userId: string,
   itemId: string,
   log: ReviewLog,
+  clientId: string | null = null,
 ): ReviewLogRow {
   const { stateBefore: before, stateAfter: after } = log;
 
@@ -62,6 +63,7 @@ export function toReviewLogRow(
     itemId,
     grade: log.grade,
     reviewedAt: log.reviewedAt.getTime(),
+    clientId,
 
     beforeState: before.state,
     beforeStability: before.memory.stability,

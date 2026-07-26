@@ -38,6 +38,21 @@ export const submitReviewBodySchema = z.object({
   reviewedAt: z.iso.datetime().optional(),
 });
 
+/** Rejeu de la file de révisions faites hors-ligne (synchronisation). */
+export const replayReviewsBodySchema = z.object({
+  reviews: z
+    .array(
+      z.object({
+        clientId: z.string().min(1).max(128),
+        itemId: z.string().min(1).max(128),
+        grade: z.enum(REVIEW_GRADES),
+        reviewedAt: z.iso.datetime(),
+      }),
+    )
+    .min(1)
+    .max(500),
+});
+
 /**
  * Réponse d'exercice, discriminée par `kind` (aligné sur `ExerciseAnswer` du
  * domaine). Bornée pour rester raisonnable.

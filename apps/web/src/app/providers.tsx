@@ -3,6 +3,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactElement, type ReactNode } from 'react';
 
+import { SyncProvider } from '@/lib/offline/sync-provider';
+
 /**
  * Contexte client de l'application.
  *
@@ -24,5 +26,9 @@ export function Providers({ children }: { children: ReactNode }): ReactElement {
       }),
   );
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <SyncProvider>{children}</SyncProvider>
+    </QueryClientProvider>
+  );
 }

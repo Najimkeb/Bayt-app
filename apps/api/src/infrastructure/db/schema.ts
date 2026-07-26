@@ -1,4 +1,4 @@
-import { index, integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 import { EXERCISE_TYPES, LEARNING_STATES, REVIEW_GRADES } from '@bayt/domain';
 
@@ -105,11 +105,21 @@ export const reviewLogs = sqliteTable(
     afterReps: integer('after_reps').notNull(),
     afterLapses: integer('after_lapses').notNull(),
     afterLearningStep: integer('after_learning_step').notNull(),
+
+    /**
+     * Identifiant **généré par le client** pour une révision faite hors-ligne.
+     * `null` pour une révision en ligne. Sa contrainte d'unicité garantit qu'un
+     * même log n'est **jamais appliqué deux fois** au retour en ligne (renvois
+     * répétés de la file de synchro) — l'idempotence des données FSRS critiques.
+     */
+    clientId: text('client_id'),
   },
   (table) => [
     /** Historique d'un apprenant, du plus recent au plus ancien. */
     index('review_logs_user_reviewed_idx').on(table.userId, table.reviewedAt),
     index('review_logs_item_idx').on(table.itemId),
+    // NULL est distinct en SQLite : les logs en ligne (client_id NULL) coexistent.
+    uniqueIndex('review_logs_client_id_idx').on(table.clientId),
   ],
 );
 

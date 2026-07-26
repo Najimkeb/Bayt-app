@@ -97,6 +97,7 @@ export function presentAnswerResult(result: ExerciseAnswerResult): ExerciseAnswe
       lastReviewedAt: state.lastReviewedAt?.toISOString() ?? null,
       reps: state.reps,
       lapses: state.lapses,
+      learningStep: state.learningStep,
     },
     intervalMs: state.due.getTime() - (state.lastReviewedAt?.getTime() ?? state.due.getTime()),
   };

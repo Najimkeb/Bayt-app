@@ -9,6 +9,9 @@ import type { DocumentDto } from '@/lib/api/document-types';
 import { useDeleteDocument, useDocuments, useUploadDocument } from '@/lib/api/document-queries';
 import { useUserId } from '@/lib/auth/use-user-id';
 
+import { OfflineNotice } from '@/components/offline/offline-notice';
+import { useSync } from '@/lib/offline/sync-provider';
+
 import { CardPreviewLayer } from './card-preview';
 import { DocumentRow } from './document-row';
 import { DomainPicker } from './domain-picker';
@@ -31,6 +34,7 @@ export function LibraryScreen({
   initialDomainId?: string | null;
 }): ReactElement {
   const userId = useUserId();
+  const { online } = useSync();
   const domains = useDomains(userId);
   const documents = useDocuments(userId);
   const upload = useUploadDocument(userId);
@@ -93,16 +97,22 @@ export function LibraryScreen({
         </Link>
       </div>
 
-      {domainList.length > 0 && (
-        <DomainPicker
-          domains={domainList}
-          value={domainId}
-          onChange={setDomainId}
-          disabled={upload.isPending}
-        />
-      )}
+      {!online ? (
+        <OfflineNotice action="Déposer un document" />
+      ) : (
+        <>
+          {domainList.length > 0 && (
+            <DomainPicker
+              domains={domainList}
+              value={domainId}
+              onChange={setDomainId}
+              disabled={upload.isPending}
+            />
+          )}
 
-      <Dropzone onFile={handleFile} onReject={setUploadError} busy={upload.isPending} />
+          <Dropzone onFile={handleFile} onReject={setUploadError} busy={upload.isPending} />
+        </>
+      )}
 
       {/* Erreur d'upload / de validation — annoncée immédiatement. */}
       {uploadError !== null && (

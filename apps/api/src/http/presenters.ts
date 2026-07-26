@@ -21,6 +21,7 @@ function presentState(state: SchedulingState): SchedulingStateDto {
     lastReviewedAt: state.lastReviewedAt?.toISOString() ?? null,
     reps: state.reps,
     lapses: state.lapses,
+    learningStep: state.learningStep,
   };
 }
 

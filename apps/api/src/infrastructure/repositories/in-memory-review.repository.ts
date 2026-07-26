@@ -28,6 +28,8 @@ export class InMemoryReviewRepository implements ReviewRepository {
   readonly #domainOf = new Map<string, string | null>();
   readonly #states = new Map<string, SchedulingState>();
   readonly #logs: ReviewLog[] = [];
+  /** Ids clients déjà appliqués (idempotence du rejeu hors-ligne). */
+  readonly #clientIds = new Set<string>();
 
   public constructor(items: readonly SeedItem[] = []) {
     for (const item of items) {
@@ -94,11 +96,32 @@ export class InMemoryReviewRepository implements ReviewRepository {
     return Promise.resolve({ item, state: this.stateOf(userId, itemId) });
   }
 
-  public commitReview({ userId, itemId, state, log }: ReviewCommit): Promise<void> {
-    this.#states.set(key(userId, itemId), state);
+  public commitReview({
+    userId,
+    itemId,
+    state,
+    log,
+    clientId = null,
+    advanceState = true,
+  }: ReviewCommit): Promise<void> {
+    if (advanceState) {
+      this.#states.set(key(userId, itemId), state);
+    }
     this.#logs.push(log);
+    if (clientId !== null) {
+      this.#clientIds.add(`${userId}:${clientId}`);
+    }
 
     return Promise.resolve();
+  }
+
+  public findAppliedClientIds(
+    userId: string,
+    clientIds: readonly string[],
+  ): Promise<ReadonlySet<string>> {
+    return Promise.resolve(
+      new Set(clientIds.filter((id) => this.#clientIds.has(`${userId}:${id}`))),
+    );
   }
 }
 

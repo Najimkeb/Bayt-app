@@ -6,10 +6,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useId, useState, type FormEvent, type ReactElement } from 'react';
 
+import { OfflineNotice } from '@/components/offline/offline-notice';
 import { useDomains } from '@/lib/api/domain-queries';
 import type { LessonLevel } from '@/lib/api/draft-types';
 import { useDrafts, useGenerateLesson } from '@/lib/api/studio-queries';
 import { useUserId } from '@/lib/auth/use-user-id';
+import { useSync } from '@/lib/offline/sync-provider';
 
 const LEVELS: readonly { value: LessonLevel; label: string }[] = [
   { value: 'beginner', label: 'Débutant' },
@@ -34,6 +36,7 @@ export function StudioPanel(): ReactElement {
   const router = useRouter();
   const ids = useId();
   const userId = useUserId();
+  const { online } = useSync();
   const domains = useDomains(userId);
   const generate = useGenerateLesson();
   const drafts = useDrafts();
@@ -60,6 +63,10 @@ export function StudioPanel(): ReactElement {
           ),
       },
     );
+  }
+
+  if (!online) {
+    return <OfflineNotice action="Générer une leçon sourcée" />;
   }
 
   return (

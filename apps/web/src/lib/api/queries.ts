@@ -2,16 +2,27 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { fetchDueQueue, fetchPreview, submitReview } from './client';
-import type { DueQueue, Preview, ReviewGrade, ReviewResult } from './types';
+import {
+  domainKeyOf,
+  enqueuePending,
+  loadSnapshot,
+  pendingItemIds,
+  saveSnapshot,
+} from '@/lib/offline/db';
+import { localPreview, localReview } from '@/lib/offline/local-review';
+
+import { fetchDueQueue, fetchPreview, replayReviews } from './client';
+import type { DueCard, DueQueue, Preview, ReviewGrade, ReviewResult } from './types';
 
 /**
- * Acces aux donnees serveur via TanStack Query.
+ * Accès aux données de révision — **résilient au hors-ligne**.
  *
- * Le cache de la file est la source de verite de la session de revision : une
- * revision retire la carte du cache immediatement (mise a jour optimiste), ce
- * qui rend l'enchainement instantane meme si le Worker met un instant a
- * repondre. En cas d'echec, on restaure l'etat precedent.
+ * Principe : le moteur FSRS pur tourne côté client, donc chaque note produit
+ * immédiatement un résultat local (affichage instantané) ET un log horodaté à
+ * id client unique. Ce log est **toujours** envoyé au serveur par le chemin
+ * idempotent (`/reviews/replay`) : en ligne tout de suite, hors-ligne mis en
+ * file. Un même log n'est donc jamais appliqué deux fois — priorité absolue :
+ * ne pas perdre ni corrompre une révision.
  */
 
 export const queryKeys = {
@@ -20,32 +31,71 @@ export const queryKeys = {
   preview: (userId: string, itemId: string) => ['preview', userId, itemId] as const,
 };
 
-/**
- * File de révision, éventuellement filtrée sur un domaine.
- *
- * `domainId` absent = tous domaines confondus (accueil, révision libre) ;
- * fourni = seules les cartes de ce domaine.
- */
+/** Charge la file : en ligne (et met en cache), sinon depuis le cache local. */
+async function loadQueue(domainId?: string): Promise<DueQueue> {
+  const domainKey = domainKeyOf(domainId);
+  const online = typeof navigator === 'undefined' || navigator.onLine;
+
+  let fetchError: unknown = null;
+  if (online) {
+    try {
+      const queue = await fetchDueQueue(20, domainId);
+      await saveSnapshot(domainKey, queue);
+
+      return queue;
+    } catch (error) {
+      fetchError = error; // réseau/serveur indisponible → on tente le cache local.
+    }
+  }
+
+  const snapshot = await loadSnapshot(domainKey);
+  if (snapshot === null) {
+    // Pas de cache : si on a tenté et échoué, on remonte l'erreur (API injoignable) ;
+    // sinon (hors-ligne, jamais mis en cache) il n'y a simplement rien à réviser.
+    if (fetchError !== null) {
+      throw fetchError;
+    }
+
+    return { now: new Date().toISOString(), count: 0, cards: [] };
+  }
+
+  // Retire les cartes déjà révisées hors-ligne (en attente de synchro).
+  const reviewed = await pendingItemIds();
+  const cards = snapshot.cards.filter((card) => !reviewed.has(card.item.id));
+
+  return { ...snapshot, cards, count: cards.length };
+}
+
 export function useDueQueue(userId: string, domainId?: string) {
   return useQuery({
     queryKey: queryKeys.queue(userId, domainId),
-    queryFn: () => fetchDueQueue(20, domainId),
-    // Les echeances evoluent cote serveur : on ne garde pas la file trop longtemps.
+    queryFn: () => loadQueue(domainId),
     staleTime: 30_000,
   });
 }
 
 /**
- * Intervalles des 4 boutons pour une carte.
- *
- * Charge seulement quand la reponse est revelee : inutile de solliciter l'API
- * tant que l'apprenant reflechit encore.
+ * Intervalles des 4 boutons pour une carte. Calculés **localement** (même moteur
+ * que le serveur) quand le réseau manque ; sinon projetés par l'API.
  */
-export function usePreview(userId: string, itemId: string | null, enabled: boolean) {
+export function usePreview(userId: string, card: DueCard | null, enabled: boolean) {
   return useQuery({
-    queryKey: queryKeys.preview(userId, itemId ?? ''),
-    queryFn: () => fetchPreview(itemId as string),
-    enabled: enabled && itemId !== null,
+    queryKey: queryKeys.preview(userId, card?.item.id ?? ''),
+    queryFn: async (): Promise<Preview> => {
+      if (card === null) {
+        throw new Error('carte absente');
+      }
+      if (typeof navigator === 'undefined' || navigator.onLine) {
+        try {
+          return await fetchPreview(card.item.id);
+        } catch {
+          // Repli local.
+        }
+      }
+
+      return localPreview(card, new Date());
+    },
+    enabled: enabled && card !== null,
     staleTime: 60_000,
   });
 }
@@ -56,20 +106,46 @@ export function useSubmitReview(userId: string, domainId?: string) {
   return useMutation<
     ReviewResult,
     Error,
-    { itemId: string; grade: ReviewGrade },
+    { card: DueCard; grade: ReviewGrade },
     { previous: DueQueue | undefined }
   >({
-    mutationFn: ({ itemId, grade }) => submitReview(itemId, grade),
+    // Résultat FSRS calculé localement (affichage instantané), log envoyé au
+    // serveur par le chemin idempotent : immédiatement en ligne, mis en file
+    // sinon. On persiste TOUJOURS avant l'envoi → aucune perte possible.
+    mutationFn: async ({ card, grade }) => {
+      const { result, entry } = localReview(card, grade, new Date());
 
-    onMutate: async ({ itemId }) => {
+      if (typeof navigator === 'undefined' || navigator.onLine) {
+        try {
+          await replayReviews([
+            {
+              clientId: entry.clientId,
+              itemId: entry.itemId,
+              grade: entry.grade,
+              reviewedAt: entry.reviewedAt,
+            },
+          ]);
+
+          return result;
+        } catch {
+          // Réseau finalement indisponible : on bascule en file (idempotent).
+        }
+      }
+
+      await enqueuePending(entry);
+
+      return result;
+    },
+
+    onMutate: async ({ card }) => {
       const key = queryKeys.queue(userId, domainId);
       await queryClient.cancelQueries({ queryKey: key });
 
       const previous = queryClient.getQueryData<DueQueue>(key);
 
-      // La carte notee quitte la file tout de suite : l'UI n'attend pas le reseau.
+      // La carte notée quitte la file tout de suite : l'UI n'attend pas le réseau.
       if (previous !== undefined) {
-        const cards = previous.cards.filter((card) => card.item.id !== itemId);
+        const cards = previous.cards.filter((c) => c.item.id !== card.item.id);
         queryClient.setQueryData<DueQueue>(key, { ...previous, cards, count: cards.length });
       }
 
@@ -82,9 +158,8 @@ export function useSubmitReview(userId: string, domainId?: string) {
       }
     },
 
-    onSettled: (_data, _error, { itemId }) => {
-      // Le prochain passage sur cette carte doit repartir d'une projection fraiche.
-      queryClient.removeQueries({ queryKey: queryKeys.preview(userId, itemId) });
+    onSettled: (_data, _error, { card }) => {
+      queryClient.removeQueries({ queryKey: queryKeys.preview(userId, card.item.id) });
     },
   });
 }

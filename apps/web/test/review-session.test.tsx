@@ -13,6 +13,8 @@ import type { DueQueue, Preview, ReviewResult } from '@/lib/api/types';
 const fetchDueQueue = vi.fn<() => Promise<DueQueue>>();
 const fetchPreview = vi.fn<() => Promise<Preview>>();
 const submitReview = vi.fn<() => Promise<ReviewResult>>();
+/** La révision passe par le chemin idempotent de synchro (`/reviews/replay`). */
+const replayReviews = vi.fn<() => Promise<{ settledClientIds: string[] }>>();
 
 vi.mock('@/lib/api/client', () => ({
   DEMO_USER_ID: 'demo',
@@ -21,6 +23,7 @@ vi.mock('@/lib/api/client', () => ({
   fetchDueQueue: () => fetchDueQueue(),
   fetchPreview: () => fetchPreview(),
   submitReview: () => submitReview(),
+  replayReviews: () => replayReviews(),
   fetchProgress: () =>
     Promise.resolve({ xpToday: 0, dailyGoal: 50, goalMet: false, ratio: 0, streak: 0, longestStreak: 0, xpTotal: 0 }),
   incrementProgress: () =>
@@ -44,6 +47,7 @@ function card(id: string, front: string, back: string): DueQueue['cards'][number
       lastReviewedAt: null,
       reps: 0,
       lapses: 0,
+      learningStep: 0,
     },
     retrievability: 0,
   };
@@ -100,6 +104,7 @@ beforeEach(() => {
       intervalMs: 10 * MINUTE,
     },
   });
+  replayReviews.mockResolvedValue({ settledClientIds: ['c'] });
 });
 
 describe('Ecran de revision', () => {
@@ -228,7 +233,7 @@ describe('Accessibilite clavier', () => {
     await user.keyboard('3');
 
     await waitFor(() => {
-      expect(submitReview).toHaveBeenCalledTimes(1);
+      expect(replayReviews).toHaveBeenCalledTimes(1);
     });
     expect(within(await questionText()).getByText('Capitale de la Tunisie ?')).toBeInTheDocument();
   });
@@ -240,7 +245,7 @@ describe('Accessibilite clavier', () => {
     await questionText();
     await user.keyboard('3');
 
-    expect(submitReview).not.toHaveBeenCalled();
+    expect(replayReviews).not.toHaveBeenCalled();
   });
 
   it('expose les raccourcis sur chaque bouton de note', async () => {
