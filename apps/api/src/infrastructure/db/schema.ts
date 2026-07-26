@@ -228,6 +228,63 @@ export const userProgress = sqliteTable('user_progress', {
 });
 
 /**
+ * Brouillons de leçons **sourcées** (studio admin) — contexte « AI Tutoring ».
+ *
+ * Une leçon générée par recherche web reste un **brouillon** jusqu'à validation
+ * par l'admin : elle n'apparaît **jamais** dans l'app d'apprentissage tant qu'elle
+ * n'est pas `published`. À la publication, seules les cartes `validated`
+ * deviennent des `learning_items` du domaine (`source_ref = 'draft:<id>'`).
+ */
+export const lessonDrafts = sqliteTable(
+  'lesson_drafts',
+  {
+    id: text('id').primaryKey(),
+    /** Admin auteur de la génération. */
+    createdBy: text('created_by').notNull(),
+    topic: text('topic').notNull(),
+    domainId: text('domain_id').notNull(),
+    level: text('level', { enum: ['beginner', 'intermediate', 'advanced'] }).notNull(),
+    status: text('status', { enum: ['draft', 'published'] })
+      .notNull()
+      .default('draft'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => [index('lesson_drafts_status_idx').on(table.status)],
+);
+
+/**
+ * Cartes d'un brouillon — **chacune adossée à sa source** (extrait + URL).
+ *
+ * `auditVerdict` porte l'annotation de la double-passe d'audit ; `status`
+ * l'état de relecture (`to_review` → `validated`). Une carte sans extrait ni URL
+ * est rejetée avant même d'arriver ici (garde-fou anti-hallucination).
+ */
+export const draftCards = sqliteTable(
+  'draft_cards',
+  {
+    id: text('id').primaryKey(),
+    draftId: text('draft_id')
+      .notNull()
+      .references(() => lessonDrafts.id),
+    front: text('front').notNull(),
+    back: text('back').notNull(),
+    /** Extrait source exact et URL de la source (grounding). */
+    sourceUrl: text('source_url').notNull(),
+    sourceExtract: text('source_extract').notNull(),
+    /** Annotation d'audit : soutenue / à vérifier / non soutenue. */
+    auditVerdict: text('audit_verdict', { enum: ['ok', 'to_verify', 'unsupported'] }).notNull(),
+    auditReason: text('audit_reason'),
+    status: text('status', { enum: ['to_review', 'validated'] })
+      .notNull()
+      .default('to_review'),
+    position: integer('position').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => [index('draft_cards_draft_idx').on(table.draftId, table.position)],
+);
+
+/**
  * Documents ingérés (contexte « Knowledge Ingestion ») : métadonnées et statut
  * de traitement. Le **texte extrait** est stocké ici (`extracted_text`), en
  * attendant l'activation de R2 (cf. lessons.md L031) ; les cartes générées

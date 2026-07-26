@@ -14,9 +14,11 @@ import type { LLMProvider } from './ingestion/llm/provider.js';
 import { CfIngestionQueue, type QueueLike } from './infrastructure/queue/cf-ingestion-queue.js';
 import { D1AccessRepository } from './infrastructure/repositories/d1-access.repository.js';
 import { D1AdminUserRepository } from './infrastructure/repositories/d1-admin-user.repository.js';
+import { createWebSearchProvider } from './ingestion/sourced/ai-gateway-search.provider.js';
 import { D1DocumentRepository } from './infrastructure/repositories/d1-document.repository.js';
 import { D1IdentityRepository } from './infrastructure/repositories/d1-identity.repository.js';
 import { D1LessonRepository } from './infrastructure/repositories/d1-lesson.repository.js';
+import { D1LessonDraftRepository } from './infrastructure/repositories/d1-lesson-draft.repository.js';
 import {
   D1CredentialRepository,
   D1PasswordResetTokenRepository,
@@ -45,6 +47,16 @@ export interface Env {
   readonly WEB_ORIGIN?: string;
   /** Domaine du cookie de session partagé entre sous-domaines (prod, ex. `.bayt.app`). */
   readonly COOKIE_DOMAIN?: string;
+  /**
+   * Recherche web du studio de leçons sourcées, via **AI Gateway → Anthropic**.
+   * Sans ces secrets, la génération répond « recherche web non configurée » (le
+   * reste du studio — relecture, publication — fonctionne). Secrets Worker.
+   */
+  readonly AI_GATEWAY_ACCOUNT_ID?: string;
+  readonly AI_GATEWAY_ID?: string;
+  readonly ANTHROPIC_API_KEY?: string;
+  /** Modèle de recherche (défaut Haiku) ; passer un modèle plus rigoureux au besoin. */
+  readonly SOURCED_SEARCH_MODEL?: string;
   /**
    * Cache KV de production (compteur de cartes dues, sessions…).
    * Provisionné, pas encore consommé par le code — binding prêt à l'emploi.
@@ -131,6 +143,16 @@ export default {
       credentialRepository: new D1CredentialRepository(db),
       passwordHasher: (password) => hashPassword(password),
       webOrigin: origins[0],
+      lessonDraftRepository: new D1LessonDraftRepository(db),
+      // Recherche web (grounding) : AI Gateway → Anthropic, ou null si non configuré.
+      webSearchProvider: createWebSearchProvider({
+        accountId: env.AI_GATEWAY_ACCOUNT_ID,
+        gatewayId: env.AI_GATEWAY_ID,
+        anthropicApiKey: env.ANTHROPIC_API_KEY,
+        model: env.SOURCED_SEARCH_MODEL,
+      }),
+      // Agent de génération + audit : même provider LLM que l'ingestion.
+      sourcedLlmProvider: createProvider(env),
       documentRepository: new D1DocumentRepository(db),
       documentStorage: new D1DocumentStorage(db),
       ingestionQueue: new CfIngestionQueue(env.INGESTION_QUEUE),

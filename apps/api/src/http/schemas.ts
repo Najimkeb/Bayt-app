@@ -86,6 +86,32 @@ export const resetPasswordBodySchema = z.object({
   newPassword: z.string().min(8).max(200),
 });
 
+/** Génération d'une leçon sourcée (studio admin). */
+export const generateSourcedBodySchema = z.object({
+  topic: z.string().trim().min(3).max(200),
+  domainId: z.string().min(1).max(128),
+  level: z.enum(['beginner', 'intermediate', 'advanced']),
+});
+
+/** Édition du recto/verso d'une carte de brouillon. */
+export const editDraftCardBodySchema = z.object({
+  front: z.string().trim().min(1).max(300),
+  back: z.string().trim().min(1).max(600),
+});
+
+/** Ajout d'une carte à un brouillon (source obligatoire — grounding). */
+export const addDraftCardBodySchema = z.object({
+  front: z.string().trim().min(1).max(300),
+  back: z.string().trim().min(1).max(600),
+  sourceUrl: z.string().trim().url().max(2000),
+  sourceExtract: z.string().trim().min(1).max(1200),
+});
+
+/** Changement de statut de relecture d'une carte. */
+export const cardStatusBodySchema = z.object({
+  status: z.enum(['to_review', 'validated']),
+});
+
 /** Événement porteur d'XP, discriminé par `type` (aligné sur `XpEvent`). */
 const xpEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('review'), grade: z.enum(REVIEW_GRADES) }),

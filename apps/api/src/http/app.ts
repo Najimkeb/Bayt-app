@@ -14,6 +14,7 @@ import type { DocumentStorage } from '../application/ports/document-storage.js';
 import type { IdentityRepository } from '../application/ports/identity-repository.js';
 import type { IngestionQueue } from '../application/ports/ingestion-queue.js';
 import type { LessonRepository } from '../application/ports/lesson-repository.js';
+import type { LessonDraftRepository } from '../application/ports/lesson-draft-repository.js';
 import type {
   CredentialRepository,
   PasswordResetTokenRepository,
@@ -25,6 +26,16 @@ import type { ReviewRepository } from '../application/ports/review-repository.js
 import { CompleteLesson } from '../application/use-cases/complete-lesson.js';
 import { CreateResetToken } from '../application/use-cases/create-reset-token.js';
 import { DeleteDocument } from '../application/use-cases/delete-document.js';
+import {
+  GenerateSourcedLesson,
+  NoSourcesError,
+} from '../application/use-cases/generate-sourced-lesson.js';
+import { PublishLessonDraft } from '../application/use-cases/publish-lesson-draft.js';
+import { CardAuditor } from '../ingestion/sourced/card-auditor.js';
+import type { WebSearchProvider } from '../ingestion/sourced/search-provider.js';
+import { SourcedCardGenerator, SourcedGenerationError } from '../ingestion/sourced/sourced-card-generator.js';
+import type { LLMProvider } from '../ingestion/llm/provider.js';
+import { presentDraft, presentDraftSummary } from './draft-dto.js';
 import {
   ExpiredResetTokenError,
   InvalidResetTokenError,
@@ -50,7 +61,11 @@ import { presentDueCard, presentPreview, presentReviewResult } from './presenter
 import type { SessionVerifier } from './session.js';
 import {
   addAllowedEmailBodySchema,
+  addDraftCardBodySchema,
+  cardStatusBodySchema,
   dueQueueQuerySchema,
+  editDraftCardBodySchema,
+  generateSourcedBodySchema,
   incrementProgressBodySchema,
   pathQuerySchema,
   previewQuerySchema,
@@ -110,6 +125,14 @@ export interface AppDependencies {
   /** Origine du front, pour bâtir le lien de réinitialisation `/reset-password?token=`. */
   readonly webOrigin?: string | undefined;
   /**
+   * Studio de leçons sourcées (admin). Les routes `/admin/lessons/*` ne sont
+   * montées que si `lessonDraftRepository` est fourni. La **génération** requiert
+   * en plus `webSearchProvider` (recherche web) et `sourcedLlmProvider` (agent).
+   */
+  readonly lessonDraftRepository?: LessonDraftRepository;
+  readonly webSearchProvider?: WebSearchProvider | null;
+  readonly sourcedLlmProvider?: LLMProvider;
+  /**
    * Pipeline d'ingestion. Les routes `/documents` ne sont montées que si les
    * trois dépendances (persistance, stockage, file) sont fournies.
    */
@@ -160,6 +183,9 @@ export function createApp({
   credentialRepository,
   passwordHasher,
   webOrigin,
+  lessonDraftRepository,
+  webSearchProvider,
+  sourcedLlmProvider,
   documentRepository,
   documentStorage,
   ingestionQueue,
@@ -434,7 +460,24 @@ export function createApp({
     });
   }
 
-  // ── Administration (réservée aux admins, rôle vérifié en base) ──────────────
+  // ── Garde de rôle admin : protège TOUT `/admin/*` (rôle vérifié en base) ────
+  if (identityRepository !== undefined) {
+    /**
+     * L'`userId` est déjà posé par la garde de session ; on relit le rôle en base
+     * (source de vérité) — un non-admin reçoit 403. Couvre les routes d'accès ET
+     * le studio de leçons.
+     */
+    app.use('/admin/*', async (context, next) => {
+      const identity = await identityRepository.findById(context.get('userId'));
+      if (identity === null || identity.role !== 'admin') {
+        return context.json({ error: 'forbidden' }, 403);
+      }
+
+      return next();
+    });
+  }
+
+  // ── Administration : accès et comptes ───────────────────────────────────────
   if (
     identityRepository !== undefined &&
     accessRepository !== undefined &&
@@ -447,20 +490,6 @@ export function createApp({
       clock,
     );
     const revokeUser = new RevokeUserAccess(accessRepository, identityRepository, adminUserRepository);
-
-    /**
-     * Garde de rôle : toute route `/admin/*` exige un compte **admin**. L'`userId`
-     * est déjà posé par la garde de session ; on relit le rôle en base (source de
-     * vérité) — un non-admin reçoit 403.
-     */
-    app.use('/admin/*', async (context, next) => {
-      const identity = await identityRepository.findById(context.get('userId'));
-      if (identity === null || identity.role !== 'admin') {
-        return context.json({ error: 'forbidden' }, 403);
-      }
-
-      return next();
-    });
 
     /** Liste blanche : les e-mails autorisés à rejoindre BAYT. */
     app.get('/admin/allowed-emails', async (context) => {
@@ -515,6 +544,137 @@ export function createApp({
       }
 
       return context.json({ ok: true });
+    });
+  }
+
+  // ── Studio de leçons sourcées (admin, sous la garde de rôle /admin/*) ────────
+  if (lessonDraftRepository !== undefined) {
+    const publishDraft = new PublishLessonDraft(lessonDraftRepository, clock);
+
+    /** Génère un brouillon de leçon sourcée par recherche web (si configurée). */
+    app.post('/admin/lessons/generate', async (context) => {
+      if (webSearchProvider === undefined || webSearchProvider === null || sourcedLlmProvider === undefined) {
+        return context.json({ error: 'search_not_configured' }, 501);
+      }
+
+      const body = generateSourcedBodySchema.safeParse(await readJson(context.req.raw));
+      if (!body.success) {
+        return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
+      }
+
+      const generate = new GenerateSourcedLesson(
+        webSearchProvider,
+        new SourcedCardGenerator(sourcedLlmProvider),
+        new CardAuditor(sourcedLlmProvider),
+        lessonDraftRepository,
+        clock,
+      );
+
+      try {
+        const draftId = await generate.execute({ ...body.data, createdBy: context.get('userId') });
+
+        return context.json({ draftId }, 201);
+      } catch (error) {
+        if (error instanceof NoSourcesError) {
+          return context.json({ error: 'no_sources' }, 422);
+        }
+        if (error instanceof SourcedGenerationError) {
+          return context.json({ error: 'generation_failed', detail: error.message }, 422);
+        }
+
+        throw error;
+      }
+    });
+
+    /** Brouillons existants (studio). */
+    app.get('/admin/lessons/drafts', async (context) => {
+      const drafts = await lessonDraftRepository.listDrafts();
+
+      return context.json({ drafts: drafts.map(presentDraftSummary) });
+    });
+
+    /** Un brouillon avec ses cartes, sources et annotations d'audit. */
+    app.get('/admin/lessons/drafts/:id', async (context) => {
+      const found = await lessonDraftRepository.findDraft(context.req.param('id'));
+      if (found === null) {
+        return context.json({ error: 'draft_not_found' }, 404);
+      }
+
+      return context.json(presentDraft(found.draft, found.cards));
+    });
+
+    /** Ajoute une carte (source obligatoire). */
+    app.post('/admin/lessons/drafts/:id/cards', async (context) => {
+      const found = await lessonDraftRepository.findDraft(context.req.param('id'));
+      if (found === null) {
+        return context.json({ error: 'draft_not_found' }, 404);
+      }
+
+      const body = addDraftCardBodySchema.safeParse(await readJson(context.req.raw));
+      if (!body.success) {
+        return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
+      }
+
+      const position = found.cards.reduce((max, card) => Math.max(max, card.position + 1), 0);
+      await lessonDraftRepository.addCard({
+        id: crypto.randomUUID(),
+        draftId: found.draft.id,
+        front: body.data.front,
+        back: body.data.back,
+        sourceUrl: body.data.sourceUrl,
+        sourceExtract: body.data.sourceExtract,
+        // Carte ajoutée à la main : audit neutre « à vérifier », à relire.
+        auditVerdict: 'to_verify',
+        auditReason: 'Ajoutée manuellement',
+        status: 'to_review',
+        position,
+        createdAt: clock().getTime(),
+      });
+
+      const refreshed = await lessonDraftRepository.findDraft(found.draft.id);
+
+      return context.json(refreshed === null ? { error: 'draft_not_found' } : presentDraft(refreshed.draft, refreshed.cards), 201);
+    });
+
+    /** Corrige le recto/verso d'une carte. */
+    app.post('/admin/lessons/drafts/:id/cards/:cardId', async (context) => {
+      const body = editDraftCardBodySchema.safeParse(await readJson(context.req.raw));
+      if (!body.success) {
+        return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
+      }
+
+      await lessonDraftRepository.updateCard(context.req.param('cardId'), body.data);
+
+      return context.json({ ok: true });
+    });
+
+    /** Change le statut de relecture d'une carte (à relire / validée). */
+    app.post('/admin/lessons/drafts/:id/cards/:cardId/status', async (context) => {
+      const body = cardStatusBodySchema.safeParse(await readJson(context.req.raw));
+      if (!body.success) {
+        return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
+      }
+
+      await lessonDraftRepository.setCardStatus(context.req.param('cardId'), body.data.status);
+
+      return context.json({ ok: true });
+    });
+
+    /** Supprime une carte du brouillon. */
+    app.delete('/admin/lessons/drafts/:id/cards/:cardId', async (context) => {
+      await lessonDraftRepository.deleteCard(context.req.param('cardId'));
+
+      return context.json({ ok: true });
+    });
+
+    /** Publie : seules les cartes validées deviennent des learning_items. */
+    app.post('/admin/lessons/drafts/:id/publish', async (context) => {
+      const result = await publishDraft.execute(context.req.param('id'));
+      if (result === null) {
+        return context.json({ error: 'draft_not_found' }, 404);
+      }
+
+      return context.json(result, 201);
     });
   }
 

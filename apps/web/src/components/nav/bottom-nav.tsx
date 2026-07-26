@@ -20,6 +20,7 @@ function isHidden(pathname: string): boolean {
   return (
     pathname === '/review' ||
     pathname.startsWith('/lesson/') ||
+    pathname.startsWith('/admin/lessons/') ||
     pathname === '/login' ||
     pathname === '/signup' ||
     pathname === '/reset-password'

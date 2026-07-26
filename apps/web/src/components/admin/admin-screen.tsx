@@ -8,6 +8,7 @@ import { useAdminUsers, useAllowedEmails } from '@/lib/api/admin-queries';
 import { ApiError } from '@/lib/api/client';
 
 import { AccessPanel } from './access-panel';
+import { StudioPanel } from './studio-panel';
 import { UsersPanel } from './users-panel';
 
 /** Une erreur de requête est-elle un refus d'accès (403) ? */
@@ -50,6 +51,16 @@ export function AdminScreen(): ReactElement {
           ← Profil
         </Link>
       </div>
+
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-col gap-0.5">
+          <h2 className="text-xl font-black tracking-tight">Générer une leçon sourcée</h2>
+          <p className="text-sm font-bold text-muted-foreground">
+            Cartes rédigées à partir d&apos;une recherche web, chaque carte adossée à sa source.
+          </p>
+        </div>
+        <StudioPanel />
+      </section>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-xl font-black tracking-tight">Liste blanche d&apos;inscription</h2>

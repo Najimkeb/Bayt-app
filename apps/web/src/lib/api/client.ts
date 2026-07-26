@@ -1,5 +1,6 @@
 import type { AdminUser, AllowedEmail, ResetLink } from './admin-types';
 import type { DomainList } from './domain-types';
+import type { DraftCardStatus, DraftDetail, DraftSummary, LessonLevel } from './draft-types';
 import type { DocumentCards, DocumentDto, DocumentList } from './document-types';
 import type { AnswerResult, ExerciseAnswer, Lesson } from './lesson-types';
 import type { LearningPath } from './path-types';
@@ -159,6 +160,81 @@ export function revokeUser(userId: string): Promise<{ ok: boolean }> {
     method: 'POST',
     body: JSON.stringify({}),
   });
+}
+
+// ── Studio de leçons sourcées (admin) ────────────────────────────────────────
+
+/** Génère un brouillon sourcé par recherche web ; renvoie l'id du brouillon. */
+export function generateSourcedLesson(input: {
+  topic: string;
+  domainId: string;
+  level: LessonLevel;
+}): Promise<{ draftId: string }> {
+  return request<{ draftId: string }>('/admin/lessons/generate', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+/** Brouillons existants. */
+export function fetchDrafts(): Promise<{ drafts: DraftSummary[] }> {
+  return request<{ drafts: DraftSummary[] }>('/admin/lessons/drafts');
+}
+
+/** Un brouillon avec ses cartes, sources et annotations d'audit. */
+export function fetchDraft(id: string): Promise<DraftDetail> {
+  return request<DraftDetail>(`/admin/lessons/drafts/${encodeURIComponent(id)}`);
+}
+
+/** Corrige le recto/verso d'une carte. */
+export function editDraftCard(
+  draftId: string,
+  cardId: string,
+  patch: { front: string; back: string },
+): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(
+    `/admin/lessons/drafts/${encodeURIComponent(draftId)}/cards/${encodeURIComponent(cardId)}`,
+    { method: 'POST', body: JSON.stringify(patch) },
+  );
+}
+
+/** Change le statut de relecture d'une carte. */
+export function setDraftCardStatus(
+  draftId: string,
+  cardId: string,
+  status: DraftCardStatus,
+): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(
+    `/admin/lessons/drafts/${encodeURIComponent(draftId)}/cards/${encodeURIComponent(cardId)}/status`,
+    { method: 'POST', body: JSON.stringify({ status }) },
+  );
+}
+
+/** Supprime une carte du brouillon. */
+export function deleteDraftCard(draftId: string, cardId: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(
+    `/admin/lessons/drafts/${encodeURIComponent(draftId)}/cards/${encodeURIComponent(cardId)}`,
+    { method: 'DELETE' },
+  );
+}
+
+/** Ajoute une carte (source obligatoire) ; renvoie le brouillon à jour. */
+export function addDraftCard(
+  draftId: string,
+  card: { front: string; back: string; sourceUrl: string; sourceExtract: string },
+): Promise<DraftDetail> {
+  return request<DraftDetail>(`/admin/lessons/drafts/${encodeURIComponent(draftId)}/cards`, {
+    method: 'POST',
+    body: JSON.stringify(card),
+  });
+}
+
+/** Publie le brouillon : les cartes validées entrent dans le circuit FSRS. */
+export function publishDraft(draftId: string): Promise<{ published: number }> {
+  return request<{ published: number }>(
+    `/admin/lessons/drafts/${encodeURIComponent(draftId)}/publish`,
+    { method: 'POST', body: JSON.stringify({}) },
+  );
 }
 
 /**
