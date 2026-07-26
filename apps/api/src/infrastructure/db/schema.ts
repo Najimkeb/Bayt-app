@@ -233,6 +233,40 @@ export const userProgress = sqliteTable('user_progress', {
  * attendant l'activation de R2 (cf. lessons.md L031) ; les cartes générées
  * deviennent des `learning_items` (`source_ref = 'doc:<id>'`).
  */
+/**
+ * Liste blanche d'inscription (contexte « Identity & Access »).
+ *
+ * BAYT est sur **invitation** : seul un e-mail présent ici peut s'inscrire et se
+ * connecter. Retirer une entrée **révoque** l'accès (vérifié aussi à la
+ * connexion). L'admin gère cette table depuis le panneau `/admin`.
+ */
+export const allowedEmails = sqliteTable('allowed_emails', {
+  email: text('email').primaryKey(),
+  addedAt: integer('added_at').notNull(),
+  /** Note libre de l'admin (qui, pourquoi). */
+  note: text('note'),
+});
+
+/**
+ * Jetons de réinitialisation de mot de passe **générés par l'admin**.
+ *
+ * À usage unique et à durée limitée : `used_at` marque la consommation,
+ * `expires_at` la péremption. La vérification (valide, non expiré, non utilisé)
+ * est **entièrement côté serveur**. Aucun e-mail n'est envoyé : l'admin
+ * transmet le lien manuellement.
+ */
+export const passwordResetTokens = sqliteTable(
+  'password_reset_tokens',
+  {
+    token: text('token').primaryKey(),
+    userId: text('user_id').notNull(),
+    expiresAt: integer('expires_at').notNull(),
+    usedAt: integer('used_at'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => [index('password_reset_tokens_user_idx').on(table.userId)],
+);
+
 export const documents = sqliteTable(
   'documents',
   {

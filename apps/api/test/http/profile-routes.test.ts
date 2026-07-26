@@ -15,10 +15,11 @@ const IDENTITY: UserIdentity = {
   id: 'demo',
   name: 'Najim',
   email: 'najim@example.com',
+  role: 'user',
   createdAt: Date.parse('2026-01-01T00:00:00Z'),
 };
 
-function build(options: { identity?: UserIdentity[]; admin?: string[] } = {}) {
+function build(options: { identity?: UserIdentity[] } = {}) {
   const progress = new InMemoryProgressRepository();
   const app = createApp({
     repository: new InMemoryReviewRepository(),
@@ -30,7 +31,6 @@ function build(options: { identity?: UserIdentity[]; admin?: string[] } = {}) {
       domainMastery: [],
       reviewEvents: [],
     }),
-    ...(options.admin !== undefined ? { adminEmails: options.admin } : {}),
     scheduler: new Scheduler(),
     sessionVerifier: alwaysUser('demo'),
     clock: () => NOW,
@@ -56,8 +56,8 @@ describe('GET /profile', () => {
     expect(body.memoryHealth.total).toBe(8);
   });
 
-  it('expose le lien admin quand l’email est administrateur', async () => {
-    const { app } = build({ admin: ['najim@example.com'] });
+  it('expose le lien admin selon le rôle en base', async () => {
+    const { app } = build({ identity: [{ ...IDENTITY, role: 'admin' }] });
     const body = (await (await app.request('/profile?timezone=UTC')).json()) as {
       user: { isAdmin: boolean };
     };

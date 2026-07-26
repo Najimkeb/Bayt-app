@@ -23,6 +23,13 @@ export const user = sqliteTable('user', {
   email: text('email').notNull().unique(),
   emailVerified: integer('email_verified', { mode: 'boolean' }).notNull(),
   image: text('image'),
+  /**
+   * Rôle applicatif : `'user'` (défaut) ou `'admin'`. Détection admin **fiable
+   * côté serveur** — jamais une simple liste en configuration. Better Auth
+   * ignore cette colonne (défaut SQL à l'insertion) ; c'est le contexte
+   * « Identity & Access » qui la lit et la fait évoluer.
+   */
+  role: text('role').notNull().default('user'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });

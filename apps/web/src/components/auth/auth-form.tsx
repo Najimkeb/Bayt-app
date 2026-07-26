@@ -203,6 +203,8 @@ interface AuthError {
  */
 function authErrorMessage(error: AuthError): string {
   switch (error.code) {
+    case 'NOT_INVITED':
+      return 'BAYT est sur invitation pour l’instant. Demande un accès à ton administrateur.';
     case 'USER_ALREADY_EXISTS':
       return 'Un compte existe déjà avec cet e-mail.';
     case 'PASSWORD_TOO_SHORT':
@@ -214,6 +216,10 @@ function authErrorMessage(error: AuthError): string {
   }
 
   const status = error.status;
+  // 403 : e-mail non invité (liste blanche) — message bienveillant.
+  if (status === 403) {
+    return 'BAYT est sur invitation pour l’instant. Demande un accès à ton administrateur.';
+  }
   // 401 : identifiants incorrects — message identique compte existant ou non.
   if (status === 401) {
     return 'E-mail ou mot de passe incorrect.';

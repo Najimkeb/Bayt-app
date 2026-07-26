@@ -7,7 +7,10 @@ import { useEffect, type ReactElement, type ReactNode } from 'react';
 import { useSession } from '@/lib/auth/client';
 
 /** Routes accessibles sans session. */
-const PUBLIC_ROUTES = new Set(['/login', '/signup']);
+const PUBLIC_ROUTES = new Set(['/login', '/signup', '/reset-password']);
+
+/** Routes réservées aux visiteurs : un connecté y est renvoyé à l'accueil. */
+const GUEST_ONLY_ROUTES = new Set(['/login', '/signup']);
 
 /**
  * Protège les routes : redirige vers `/login` sans session valide, et renvoie à
@@ -28,10 +31,10 @@ export function AuthGate({ children }: { children: ReactNode }): ReactElement {
     }
     if (!isPublic && session === null) {
       router.replace('/login');
-    } else if (isPublic && session !== null) {
+    } else if (GUEST_ONLY_ROUTES.has(pathname) && session !== null) {
       router.replace('/');
     }
-  }, [isPending, isPublic, session, router]);
+  }, [isPending, isPublic, pathname, session, router]);
 
   // Pages publiques : toujours affichées (le formulaire de connexion lui-même).
   if (isPublic) {

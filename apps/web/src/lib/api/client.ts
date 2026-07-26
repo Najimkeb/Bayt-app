@@ -1,3 +1,4 @@
+import type { AdminUser, AllowedEmail, ResetLink } from './admin-types';
 import type { DomainList } from './domain-types';
 import type { DocumentCards, DocumentDto, DocumentList } from './document-types';
 import type { AnswerResult, ExerciseAnswer, Lesson } from './lesson-types';
@@ -115,6 +116,79 @@ export function setDailyGoal(dailyGoal: number, timezone: string): Promise<Daily
     method: 'POST',
     body: JSON.stringify({ dailyGoal, timezone }),
   });
+}
+
+// ── Administration (réservé aux admins ; l'API renvoie 403 sinon) ────────────
+
+/** Liste blanche d'inscription. */
+export function fetchAllowedEmails(): Promise<{ emails: AllowedEmail[] }> {
+  return request<{ emails: AllowedEmail[] }>('/admin/allowed-emails');
+}
+
+/** Autorise un e-mail (renvoie la liste à jour). */
+export function addAllowedEmail(email: string, note: string): Promise<{ emails: AllowedEmail[] }> {
+  return request<{ emails: AllowedEmail[] }>('/admin/allowed-emails', {
+    method: 'POST',
+    body: JSON.stringify({ email, ...(note !== '' ? { note } : {}) }),
+  });
+}
+
+/** Retire un e-mail de la liste blanche (renvoie la liste à jour). */
+export function removeAllowedEmail(email: string): Promise<{ emails: AllowedEmail[] }> {
+  return request<{ emails: AllowedEmail[] }>(`/admin/allowed-emails/${encodeURIComponent(email)}`, {
+    method: 'DELETE',
+  });
+}
+
+/** Comptes inscrits. */
+export function fetchAdminUsers(): Promise<{ users: AdminUser[] }> {
+  return request<{ users: AdminUser[] }>('/admin/users');
+}
+
+/** Génère un lien de réinitialisation à usage unique pour un compte. */
+export function createResetToken(userId: string): Promise<ResetLink> {
+  return request<ResetLink>(`/admin/users/${encodeURIComponent(userId)}/reset-token`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+/** Révoque l'accès d'un compte (liste blanche + sessions). */
+export function revokeUser(userId: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(`/admin/users/${encodeURIComponent(userId)}/revoke`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+/**
+ * Définit un nouveau mot de passe via un jeton (écran public `/reset-password`).
+ *
+ * En cas d'échec, l'erreur porte le **code** serveur (`token_expired`,
+ * `token_invalid`, `invalid_request`) comme `message`, pour un retour précis.
+ */
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}/reset-password`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, newPassword }),
+    });
+  } catch {
+    throw new ApiError(0, `L'API BAYT est injoignable sur ${API_URL}.`);
+  }
+
+  if (!response.ok) {
+    let code: string | undefined;
+    try {
+      code = ((await response.json()) as { error?: string }).error;
+    } catch {
+      code = undefined;
+    }
+    throw new ApiError(response.status, code ?? 'error');
+  }
 }
 
 /** Enregistre un gain d'XP (l'XP est calculé côté domaine). */

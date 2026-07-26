@@ -74,6 +74,18 @@ export const setDailyGoalBodySchema = z.object({
   timezone,
 });
 
+/** Ajout d'un e-mail à la liste blanche (admin). */
+export const addAllowedEmailBodySchema = z.object({
+  email: z.string().email().max(320),
+  note: z.string().max(280).optional(),
+});
+
+/** Réinitialisation publique : jeton + nouveau mot de passe (min. Better Auth). */
+export const resetPasswordBodySchema = z.object({
+  token: z.string().min(1).max(128),
+  newPassword: z.string().min(8).max(200),
+});
+
 /** Événement porteur d'XP, discriminé par `type` (aligné sur `XpEvent`). */
 const xpEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('review'), grade: z.enum(REVIEW_GRADES) }),

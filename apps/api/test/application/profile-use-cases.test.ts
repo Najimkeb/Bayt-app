@@ -16,6 +16,7 @@ const IDENTITY: UserIdentity = {
   id: 'demo',
   name: 'Najim',
   email: 'najim@example.com',
+  role: 'user',
   createdAt: Date.parse('2026-01-01T00:00:00Z'),
 };
 
@@ -125,12 +126,11 @@ describe('GetProfile', () => {
     expect(profile.activity.hasEnoughHistory).toBe(true);
   });
 
-  it('marque admin quand l’email figure dans la liste (insensible à la casse)', async () => {
+  it('marque admin selon le rôle en base (source de vérité côté serveur)', async () => {
     const profile = await new GetProfile(
-      new InMemoryIdentityRepository([IDENTITY]),
+      new InMemoryIdentityRepository([{ ...IDENTITY, role: 'admin' }]),
       new InMemoryProgressRepository(),
       new InMemoryProfileStatsRepository(),
-      new Set(['najim@example.com']),
     ).execute('demo', NOW, TZ);
 
     expect(profile.user.isAdmin).toBe(true);

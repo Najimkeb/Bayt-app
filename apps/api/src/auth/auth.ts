@@ -1,8 +1,10 @@
 import { betterAuth } from 'better-auth';
+import { createAuthMiddleware } from 'better-auth/api';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 
 import { account, session, user, verification } from '../infrastructure/db/auth-schema.js';
+import { ensureInvited, isGatedAuthPath } from './invite-guard.js';
 
 /** Paramètres d'exécution de Better Auth, injectés par le point d'entrée. */
 export interface AuthOptions {
@@ -18,6 +20,11 @@ export interface AuthOptions {
    * (localhost) : le cookie reste alors sur l'hôte courant.
    */
   readonly cookieDomain?: string;
+  /**
+   * Vérifie qu'un e-mail est autorisé (liste blanche). Branché sur les hooks
+   * d'inscription **et** de connexion. Absent (tests) → tout e-mail est accepté.
+   */
+  readonly isEmailAllowed?: (email: string) => Promise<boolean>;
 }
 
 /**
@@ -42,6 +49,20 @@ export function createAuth(db: DrizzleD1Database, options: AuthOptions) {
       // Aucun service d'e-mail n'est encore branché : exiger la vérification
       // empêcherait toute connexion. À réactiver quand l'envoi sera en place.
       requireEmailVerification: false,
+    },
+    // Liste blanche : inscription ET connexion réservées aux e-mails invités.
+    // Sans vérificateur fourni (tests), le hook laisse tout passer.
+    hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        if (options.isEmailAllowed === undefined || !isGatedAuthPath(ctx.path)) {
+          return;
+        }
+
+        const body = ctx.body as { email?: unknown } | undefined;
+        const email = typeof body?.email === 'string' ? body.email : undefined;
+
+        await ensureInvited(email, options.isEmailAllowed);
+      }),
     },
     advanced: {
       // Front et API sur deux sous-domaines : le cookie doit porter le domaine

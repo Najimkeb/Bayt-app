@@ -10,6 +10,8 @@ export interface UserIdentity {
   readonly id: string;
   readonly name: string;
   readonly email: string;
+  /** Rôle applicatif (`'user'` | `'admin'`) — détection admin côté serveur. */
+  readonly role: string;
   /** Date d'inscription, epoch ms. */
   readonly createdAt: number;
 }

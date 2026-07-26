@@ -7,17 +7,30 @@ import {
   ItemNotFoundError,
   LessonNotFoundError,
 } from '../application/errors.js';
+import type { AccessRepository } from '../application/ports/access-repository.js';
+import type { AdminUserRepository } from '../application/ports/admin-user-repository.js';
 import type { DocumentRepository } from '../application/ports/document-repository.js';
 import type { DocumentStorage } from '../application/ports/document-storage.js';
 import type { IdentityRepository } from '../application/ports/identity-repository.js';
 import type { IngestionQueue } from '../application/ports/ingestion-queue.js';
 import type { LessonRepository } from '../application/ports/lesson-repository.js';
+import type {
+  CredentialRepository,
+  PasswordResetTokenRepository,
+} from '../application/ports/password-reset-repository.js';
 import type { PathRepository } from '../application/ports/path-repository.js';
 import type { ProfileStatsRepository } from '../application/ports/profile-stats-repository.js';
 import type { ProgressRepository } from '../application/ports/progress-repository.js';
 import type { ReviewRepository } from '../application/ports/review-repository.js';
 import { CompleteLesson } from '../application/use-cases/complete-lesson.js';
+import { CreateResetToken } from '../application/use-cases/create-reset-token.js';
 import { DeleteDocument } from '../application/use-cases/delete-document.js';
+import {
+  ExpiredResetTokenError,
+  InvalidResetTokenError,
+  ResetPasswordWithToken,
+} from '../application/use-cases/reset-password.js';
+import { RevokeUserAccess } from '../application/use-cases/revoke-user-access.js';
 import { SubmitDocument } from '../application/use-cases/submit-document.js';
 import { UnsupportedFormatError } from '../ingestion/format.js';
 import { presentDocument, presentDocumentCard } from './document-dto.js';
@@ -36,11 +49,13 @@ import { presentAnswerResult, presentLesson } from './lesson-presenters.js';
 import { presentDueCard, presentPreview, presentReviewResult } from './presenters.js';
 import type { SessionVerifier } from './session.js';
 import {
+  addAllowedEmailBodySchema,
   dueQueueQuerySchema,
   incrementProgressBodySchema,
   pathQuerySchema,
   previewQuerySchema,
   progressQuerySchema,
+  resetPasswordBodySchema,
   setDailyGoalBodySchema,
   submitAnswerBodySchema,
   submitReviewBodySchema,
@@ -80,8 +95,20 @@ export interface AppDependencies {
    */
   readonly identityRepository?: IdentityRepository;
   readonly profileStatsRepository?: ProfileStatsRepository;
-  /** Emails administrateurs (config) : affichent le lien `/admin` dans le profil. */
-  readonly adminEmails?: readonly string[];
+  /**
+   * Administration (contexte « Identity & Access »). Les routes `/admin/*` — et
+   * la garde de rôle — ne sont montées que si les trois sont fournis. La route
+   * publique `/reset-password` requiert `passwordResetTokenRepository` +
+   * `credentialRepository` + `passwordHasher`.
+   */
+  readonly accessRepository?: AccessRepository;
+  readonly adminUserRepository?: AdminUserRepository;
+  readonly passwordResetTokenRepository?: PasswordResetTokenRepository;
+  readonly credentialRepository?: CredentialRepository;
+  /** Hache un mot de passe (fonction Better Auth) — injecté pour rester testable. */
+  readonly passwordHasher?: (password: string) => Promise<string>;
+  /** Origine du front, pour bâtir le lien de réinitialisation `/reset-password?token=`. */
+  readonly webOrigin?: string | undefined;
   /**
    * Pipeline d'ingestion. Les routes `/documents` ne sont montées que si les
    * trois dépendances (persistance, stockage, file) sont fournies.
@@ -104,9 +131,9 @@ export interface AppDependencies {
 /** Origines de developpement local (Next.js). */
 const DEV_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000'] as const;
 
-/** Chemins publics : ni session ni 401 (sonde de vie + routes d'auth). */
+/** Chemins publics : ni session ni 401 (sonde de vie, auth, reset public). */
 function isPublicPath(path: string): boolean {
-  return path === '/health' || path.startsWith('/api/auth/');
+  return path === '/health' || path === '/reset-password' || path.startsWith('/api/auth/');
 }
 
 /**
@@ -127,7 +154,12 @@ export function createApp({
   pathRepository,
   identityRepository,
   profileStatsRepository,
-  adminEmails = [],
+  accessRepository,
+  adminUserRepository,
+  passwordResetTokenRepository,
+  credentialRepository,
+  passwordHasher,
+  webOrigin,
   documentRepository,
   documentStorage,
   ingestionQueue,
@@ -374,7 +406,6 @@ export function createApp({
       identityRepository,
       progressRepository,
       profileStatsRepository,
-      new Set(adminEmails.map((email) => email.toLowerCase())),
     );
 
     /** Profil + statistiques agrégées (identité, séries, santé mémoire, activité). */
@@ -396,6 +427,127 @@ export function createApp({
       } catch (error) {
         if (error instanceof ProfileNotFoundError) {
           return context.json({ error: 'profile_not_found' }, 404);
+        }
+
+        throw error;
+      }
+    });
+  }
+
+  // ── Administration (réservée aux admins, rôle vérifié en base) ──────────────
+  if (
+    identityRepository !== undefined &&
+    accessRepository !== undefined &&
+    adminUserRepository !== undefined &&
+    passwordResetTokenRepository !== undefined
+  ) {
+    const createResetToken = new CreateResetToken(
+      passwordResetTokenRepository,
+      identityRepository,
+      clock,
+    );
+    const revokeUser = new RevokeUserAccess(accessRepository, identityRepository, adminUserRepository);
+
+    /**
+     * Garde de rôle : toute route `/admin/*` exige un compte **admin**. L'`userId`
+     * est déjà posé par la garde de session ; on relit le rôle en base (source de
+     * vérité) — un non-admin reçoit 403.
+     */
+    app.use('/admin/*', async (context, next) => {
+      const identity = await identityRepository.findById(context.get('userId'));
+      if (identity === null || identity.role !== 'admin') {
+        return context.json({ error: 'forbidden' }, 403);
+      }
+
+      return next();
+    });
+
+    /** Liste blanche : les e-mails autorisés à rejoindre BAYT. */
+    app.get('/admin/allowed-emails', async (context) => {
+      return context.json({ emails: await accessRepository.list() });
+    });
+
+    /** Ajoute (ou met à jour la note d') un e-mail autorisé. */
+    app.post('/admin/allowed-emails', async (context) => {
+      const body = addAllowedEmailBodySchema.safeParse(await readJson(context.req.raw));
+      if (!body.success) {
+        return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
+      }
+
+      await accessRepository.add(body.data.email, body.data.note ?? null, clock().getTime());
+
+      return context.json({ emails: await accessRepository.list() }, 201);
+    });
+
+    /** Retire un e-mail de la liste blanche (bloque les inscriptions futures). */
+    app.delete('/admin/allowed-emails/:email', async (context) => {
+      await accessRepository.remove(context.req.param('email'));
+
+      return context.json({ emails: await accessRepository.list() });
+    });
+
+    /** Comptes inscrits (e-mail, rôle, inscription, dernière activité). */
+    app.get('/admin/users', async (context) => {
+      return context.json({ users: await adminUserRepository.listUsers() });
+    });
+
+    /**
+     * Génère un lien de réinitialisation à usage unique pour un compte, à
+     * transmettre manuellement. Ne renvoie jamais de mot de passe.
+     */
+    app.post('/admin/users/:id/reset-token', async (context) => {
+      const result = await createResetToken.execute(context.req.param('id'));
+      if (result === null) {
+        return context.json({ error: 'user_not_found' }, 404);
+      }
+
+      const base = webOrigin ?? '';
+      const link = `${base}/reset-password?token=${encodeURIComponent(result.token)}`;
+
+      return context.json({ link, expiresAt: result.expiresAt }, 201);
+    });
+
+    /** Révoque l'accès d'un compte : retrait de la liste blanche + sessions fermées. */
+    app.post('/admin/users/:id/revoke', async (context) => {
+      const done = await revokeUser.execute(context.req.param('id'));
+      if (!done) {
+        return context.json({ error: 'user_not_found' }, 404);
+      }
+
+      return context.json({ ok: true });
+    });
+  }
+
+  // ── Réinitialisation de mot de passe (public, via jeton) ────────────────────
+  if (
+    passwordResetTokenRepository !== undefined &&
+    credentialRepository !== undefined &&
+    passwordHasher !== undefined
+  ) {
+    const resetPassword = new ResetPasswordWithToken(
+      passwordResetTokenRepository,
+      credentialRepository,
+      passwordHasher,
+      clock,
+    );
+
+    /** Définit un nouveau mot de passe à partir d'un jeton (vérifié côté serveur). */
+    app.post('/reset-password', async (context) => {
+      const body = resetPasswordBodySchema.safeParse(await readJson(context.req.raw));
+      if (!body.success) {
+        return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
+      }
+
+      try {
+        await resetPassword.execute(body.data.token, body.data.newPassword);
+
+        return context.json({ ok: true });
+      } catch (error) {
+        if (error instanceof ExpiredResetTokenError) {
+          return context.json({ error: 'token_expired' }, 400);
+        }
+        if (error instanceof InvalidResetTokenError) {
+          return context.json({ error: 'token_invalid' }, 400);
         }
 
         throw error;

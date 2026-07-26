@@ -64,6 +64,13 @@
       "when": 1784997679530,
       "tag": "0008_domain_icons",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1785072679530,
+      "tag": "0009_admin_access",
+      "breakpoints": true
     }
   ]
 }

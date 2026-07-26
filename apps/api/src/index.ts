@@ -1,4 +1,5 @@
 import { Scheduler } from '@bayt/domain';
+import { hashPassword } from 'better-auth/crypto';
 import { drizzle, type DrizzleD1Database } from 'drizzle-orm/d1';
 
 import type { IngestionMessage } from './application/ports/ingestion-queue.js';
@@ -11,9 +12,15 @@ import { HeuristicProvider } from './ingestion/llm/heuristic-provider.js';
 import { WorkersAiProvider, type WorkersAiBinding } from './ingestion/llm/workers-ai-provider.js';
 import type { LLMProvider } from './ingestion/llm/provider.js';
 import { CfIngestionQueue, type QueueLike } from './infrastructure/queue/cf-ingestion-queue.js';
+import { D1AccessRepository } from './infrastructure/repositories/d1-access.repository.js';
+import { D1AdminUserRepository } from './infrastructure/repositories/d1-admin-user.repository.js';
 import { D1DocumentRepository } from './infrastructure/repositories/d1-document.repository.js';
 import { D1IdentityRepository } from './infrastructure/repositories/d1-identity.repository.js';
 import { D1LessonRepository } from './infrastructure/repositories/d1-lesson.repository.js';
+import {
+  D1CredentialRepository,
+  D1PasswordResetTokenRepository,
+} from './infrastructure/repositories/d1-password-reset.repository.js';
 import { D1PathRepository } from './infrastructure/repositories/d1-path.repository.js';
 import { D1ProfileStatsRepository } from './infrastructure/repositories/d1-profile-stats.repository.js';
 import { D1ProgressRepository } from './infrastructure/repositories/d1-progress.repository.js';
@@ -38,8 +45,6 @@ export interface Env {
   readonly WEB_ORIGIN?: string;
   /** Domaine du cookie de session partagé entre sous-domaines (prod, ex. `.bayt.app`). */
   readonly COOKIE_DOMAIN?: string;
-  /** Emails administrateurs, séparés par des virgules (affichent le lien `/admin`). */
-  readonly ADMIN_EMAILS?: string;
   /**
    * Cache KV de production (compteur de cartes dues, sessions…).
    * Provisionné, pas encore consommé par le code — binding prêt à l'emploi.
@@ -54,13 +59,6 @@ function webOrigins(env: Env): string[] {
     : ['http://localhost:3000', 'http://127.0.0.1:3000'];
 }
 
-/** Liste d'emails administrateurs depuis `ADMIN_EMAILS` (séparés par des virgules). */
-function parseAdminEmails(raw: string | undefined): string[] {
-  return (raw ?? '')
-    .split(',')
-    .map((email) => email.trim())
-    .filter((email) => email !== '');
-}
 
 /**
  * Choisit le fournisseur LLM : Workers AI si le binding existe, sinon le repli
@@ -107,10 +105,14 @@ export default {
     const db = drizzle(env.DB);
 
     const origins = webOrigins(env);
+    // Partagé par le hook d'invitation (Better Auth) ET les routes admin.
+    const accessRepository = new D1AccessRepository(db);
     const auth = createAuth(db, {
       secret: env.BETTER_AUTH_SECRET,
       baseURL: env.BETTER_AUTH_URL ?? new URL(request.url).origin,
       trustedOrigins: origins,
+      // Liste blanche : inscription et connexion réservées aux e-mails invités.
+      isEmailAllowed: (email) => accessRepository.isAllowed(email),
       ...(env.COOKIE_DOMAIN !== undefined && env.COOKIE_DOMAIN !== ''
         ? { cookieDomain: env.COOKIE_DOMAIN }
         : {}),
@@ -123,7 +125,12 @@ export default {
       pathRepository: new D1PathRepository(db),
       identityRepository: new D1IdentityRepository(db),
       profileStatsRepository: new D1ProfileStatsRepository(db),
-      adminEmails: parseAdminEmails(env.ADMIN_EMAILS),
+      accessRepository,
+      adminUserRepository: new D1AdminUserRepository(db),
+      passwordResetTokenRepository: new D1PasswordResetTokenRepository(db),
+      credentialRepository: new D1CredentialRepository(db),
+      passwordHasher: (password) => hashPassword(password),
+      webOrigin: origins[0],
       documentRepository: new D1DocumentRepository(db),
       documentStorage: new D1DocumentStorage(db),
       ingestionQueue: new CfIngestionQueue(env.INGESTION_QUEUE),

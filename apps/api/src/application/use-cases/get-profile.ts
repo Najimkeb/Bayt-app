@@ -106,8 +106,6 @@ export class GetProfile {
     private readonly identity: IdentityRepository,
     private readonly progress: ProgressRepository,
     private readonly stats: ProfileStatsRepository,
-    /** Emails administrateurs (minuscules), depuis la configuration. */
-    private readonly adminEmails: ReadonlySet<string> = new Set(),
   ) {}
 
   public async execute(userId: string, now: Date, timeZone: string): Promise<ProfileData> {
@@ -148,7 +146,8 @@ export class GetProfile {
         name: identity.name,
         email: identity.email,
         memberSince: new Date(identity.createdAt).toISOString(),
-        isAdmin: this.adminEmails.has(identity.email.toLowerCase()),
+        // Détection admin **fiable** : le rôle vient de la base, pas d'une config.
+        isAdmin: identity.role === 'admin',
       },
       stats: {
         currentStreak: status.streak,

@@ -22,6 +22,7 @@ export class D1IdentityRepository implements IdentityRepository {
       id: row.id,
       name: row.name,
       email: row.email,
+      role: row.role,
       // `created_at` est un timestamp Drizzle (Date) → epoch ms.
       createdAt: row.createdAt.getTime(),
     };
