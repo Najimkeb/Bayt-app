@@ -114,3 +114,49 @@ describe('publication', () => {
     expect(drafts.published).toHaveLength(1);
   });
 });
+
+describe('génération de vocabulaire par fréquence', () => {
+  const VOCAB = JSON.stringify({
+    words: [
+      { word: 'the', translation: 'le/la', category: 'article', example: 'The cat.', exampleTranslation: 'Le chat.' },
+      { word: 'be', translation: 'être', category: 'verbe', example: 'To be here.', exampleTranslation: 'Être ici.' },
+    ],
+  });
+
+  function buildVocab() {
+    drafts = new InMemoryLessonDraftRepository();
+
+    return createApp({
+      repository: new InMemoryReviewRepository(),
+      identityRepository: new InMemoryIdentityRepository([ADMIN, MEMBER]),
+      lessonDraftRepository: drafts,
+      sourcedLlmProvider: llm(VOCAB),
+      scheduler: new Scheduler(),
+      sessionVerifier: bearerVerifier(),
+      clock: () => NOW,
+    });
+  }
+
+  it('crée un brouillon de vocabulaire et renvoie le récap', async () => {
+    const vocabApp = buildVocab();
+    const res = await post(vocabApp, '/admin/lessons/vocabulary', { tranche: '1-100', domainId: 'dom_anglais', batchSize: 30 }, 'admin1');
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { draftId: string | null; created: number; batches: number };
+    expect(body.created).toBe(2); // "the" et "be" (uniques)
+    expect(body.batches).toBeGreaterThanOrEqual(1);
+    expect(body.draftId).not.toBeNull();
+  });
+
+  it('refuse une tranche inconnue (400)', async () => {
+    const vocabApp = buildVocab();
+    const res = await post(vocabApp, '/admin/lessons/vocabulary', { tranche: '9-9', domainId: 'dom_anglais' }, 'admin1');
+    expect(res.status).toBe(400);
+  });
+
+  it('refuse un non-admin (403)', async () => {
+    const vocabApp = buildVocab();
+    const res = await post(vocabApp, '/admin/lessons/vocabulary', { tranche: '1-100', domainId: 'dom_anglais' }, 'user2');
+    expect(res.status).toBe(403);
+  });
+});

@@ -87,4 +87,10 @@ export class InMemoryLessonDraftRepository implements LessonDraftRepository {
 
     return Promise.resolve();
   }
+
+  public existingFronts(domainId: string): Promise<readonly string[]> {
+    return Promise.resolve(
+      this.published.filter((item) => item.domainId === domainId).map((item) => item.front),
+    );
+  }
 }

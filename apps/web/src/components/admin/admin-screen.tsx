@@ -10,6 +10,7 @@ import { ApiError } from '@/lib/api/client';
 import { AccessPanel } from './access-panel';
 import { StudioPanel } from './studio-panel';
 import { UsersPanel } from './users-panel';
+import { VocabPanel } from './vocab-panel';
 
 /** Une erreur de requête est-elle un refus d'accès (403) ? */
 function isForbidden(error: unknown): boolean {
@@ -60,6 +61,16 @@ export function AdminScreen(): ReactElement {
           </p>
         </div>
         <StudioPanel />
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-col gap-0.5">
+          <h2 className="text-xl font-black tracking-tight">Vocabulaire par fréquence</h2>
+          <p className="text-sm font-bold text-muted-foreground">
+            Générer les mots anglais les plus utiles, par tranche de fréquence, sans doublon.
+          </p>
+        </div>
+        <VocabPanel />
       </section>
 
       <section className="flex flex-col gap-4">

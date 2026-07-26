@@ -17,6 +17,11 @@ const AUDIT: Record<AuditVerdict, { label: string; className: string }> = {
 const inputClass =
   'w-full rounded-[var(--radius-button)] border-2 border-border bg-surface px-3 py-2 text-sm font-bold text-foreground focus-visible:border-macaw focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
+/** Vrai si la source est une URL web cliquable (sinon : simple libellé). */
+function isHttpUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value);
+}
+
 /**
  * Une carte de brouillon en relecture : recto/verso éditables, extrait source
  * + lien cliquable, annotation d'audit en évidence, statut (à relire / validée),
@@ -90,15 +95,22 @@ export function DraftCardRow({
           « {card.sourceExtract} »
         </blockquote>
         <figcaption>
-          <a
-            href={card.sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs font-extrabold text-macaw underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <ExternalLink aria-hidden="true" className="size-3.5" />
-            <span className="max-w-[16rem] truncate">{card.sourceUrl}</span>
-          </a>
+          {/* Une vraie URL (leçon sourcée) devient un lien ; une source non-web
+              (ex. « Fréquence anglais · rang 1–100 » du vocabulaire) reste un
+              simple libellé, jamais un lien cassé. */}
+          {isHttpUrl(card.sourceUrl) ? (
+            <a
+              href={card.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-extrabold text-macaw underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ExternalLink aria-hidden="true" className="size-3.5" />
+              <span className="max-w-[16rem] truncate">{card.sourceUrl}</span>
+            </a>
+          ) : (
+            <span className="text-xs font-extrabold text-muted-foreground">{card.sourceUrl}</span>
+          )}
         </figcaption>
       </figure>
 

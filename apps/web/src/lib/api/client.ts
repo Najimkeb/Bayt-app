@@ -247,6 +247,30 @@ export function generateSourcedLesson(input: {
   });
 }
 
+/** Identifiant d'une tranche de fréquence de vocabulaire. */
+export type VocabTranche = '1-100' | '100-300' | '300-600' | '600-1000';
+
+/** Récap d'une génération de vocabulaire (économie de quota). */
+export interface VocabularyResult {
+  readonly draftId: string | null;
+  readonly requested: number;
+  readonly created: number;
+  readonly duplicatesSkipped: number;
+  readonly batches: number;
+}
+
+/** Génère un brouillon de vocabulaire par tranche de fréquence ; renvoie le récap. */
+export function generateVocabulary(input: {
+  tranche: VocabTranche;
+  domainId: string;
+  batchSize?: number;
+}): Promise<VocabularyResult> {
+  return request<VocabularyResult>('/admin/lessons/vocabulary', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 /** Brouillons existants. */
 export function fetchDrafts(): Promise<{ drafts: DraftSummary[] }> {
   return request<{ drafts: DraftSummary[] }>('/admin/lessons/drafts');

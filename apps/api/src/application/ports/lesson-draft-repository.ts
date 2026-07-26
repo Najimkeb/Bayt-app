@@ -74,4 +74,10 @@ export interface LessonDraftRepository {
    * et passe le brouillon en `published`. Atomique.
    */
   publish(draftId: string, items: readonly LearningItemRecord[], now: number): Promise<void>;
+
+  /**
+   * Rectos (`front`) des `learning_items` déjà **publiés** dans un domaine.
+   * Base de la déduplication du vocabulaire : on n'ajoute pas un mot déjà connu.
+   */
+  existingFronts(domainId: string): Promise<readonly string[]>;
 }

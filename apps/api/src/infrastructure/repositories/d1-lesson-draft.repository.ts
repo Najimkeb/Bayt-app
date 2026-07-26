@@ -87,6 +87,15 @@ export class D1LessonDraftRepository implements LessonDraftRepository {
     await this.db.insert(draftCards).values(card);
   }
 
+  public async existingFronts(domainId: string): Promise<readonly string[]> {
+    const rows = await this.db
+      .select({ front: learningItems.front })
+      .from(learningItems)
+      .where(eq(learningItems.domainId, domainId));
+
+    return rows.map((r) => r.front);
+  }
+
   public async publish(
     draftId: string,
     items: readonly LearningItemRecord[],

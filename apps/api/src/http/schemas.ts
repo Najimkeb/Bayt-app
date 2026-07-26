@@ -132,6 +132,14 @@ export const generateSourcedBodySchema = z.object({
   level: z.enum(['beginner', 'intermediate', 'advanced']),
 });
 
+/** Génération de vocabulaire par tranche de fréquence (studio admin). */
+export const generateVocabularyBodySchema = z.object({
+  tranche: z.enum(['1-100', '100-300', '300-600', '600-1000']),
+  domainId: z.string().min(1).max(128),
+  /** Mots par appel LLM (paquet). Borné côté domaine à 10–40. */
+  batchSize: z.coerce.number().int().min(10).max(40).optional(),
+});
+
 /** Édition du recto/verso d'une carte de brouillon. */
 export const editDraftCardBodySchema = z.object({
   front: z.string().trim().min(1).max(300),

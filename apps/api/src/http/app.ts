@@ -41,6 +41,9 @@ import { PublishLessonDraft } from '../application/use-cases/publish-lesson-draf
 import { CardAuditor } from '../ingestion/sourced/card-auditor.js';
 import type { WebSearchProvider } from '../ingestion/sourced/search-provider.js';
 import { SourcedCardGenerator, SourcedGenerationError } from '../ingestion/sourced/sourced-card-generator.js';
+import { VocabularyGenerator, VocabGenerationError } from '../ingestion/vocab/vocabulary-generator.js';
+import { findTranche } from '../ingestion/vocab/tranches.js';
+import { GenerateVocabulary } from '../application/use-cases/generate-vocabulary.js';
 import type { LLMProvider } from '../ingestion/llm/provider.js';
 import { presentDraft, presentDraftSummary } from './draft-dto.js';
 import {
@@ -78,6 +81,7 @@ import {
   explanationDraftBodySchema,
   explanationHistoryQuerySchema,
   generateSourcedBodySchema,
+  generateVocabularyBodySchema,
   incrementProgressBodySchema,
   pathQuerySchema,
   previewQuerySchema,
@@ -720,6 +724,51 @@ export function createApp({
           return context.json({ error: 'no_sources' }, 422);
         }
         if (error instanceof SourcedGenerationError) {
+          return context.json({ error: 'generation_failed', detail: error.message }, 422);
+        }
+
+        throw error;
+      }
+    });
+
+    /**
+     * Génère un brouillon de **vocabulaire** par tranche de fréquence.
+     *
+     * N'exige PAS la recherche web (les mots viennent du LLM d'après les listes
+     * de fréquence standard) — juste un provider LLM. Dédup + paquets bornés.
+     */
+    app.post('/admin/lessons/vocabulary', async (context) => {
+      if (sourcedLlmProvider === undefined) {
+        return context.json({ error: 'llm_not_configured' }, 501);
+      }
+
+      const body = generateVocabularyBodySchema.safeParse(await readJson(context.req.raw));
+      if (!body.success) {
+        return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
+      }
+
+      const tranche = findTranche(body.data.tranche);
+      if (tranche === null) {
+        return context.json({ error: 'unknown_tranche' }, 400);
+      }
+
+      const generate = new GenerateVocabulary(
+        new VocabularyGenerator(sourcedLlmProvider),
+        lessonDraftRepository,
+        clock,
+      );
+
+      try {
+        const result = await generate.execute({
+          tranche,
+          domainId: body.data.domainId,
+          createdBy: context.get('userId'),
+          batchSize: body.data.batchSize,
+        });
+
+        return context.json(result, 201);
+      } catch (error) {
+        if (error instanceof VocabGenerationError) {
           return context.json({ error: 'generation_failed', detail: error.message }, 422);
         }
 

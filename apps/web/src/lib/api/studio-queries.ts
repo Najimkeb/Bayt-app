@@ -9,8 +9,11 @@ import {
   fetchDraft,
   fetchDrafts,
   generateSourcedLesson,
+  generateVocabulary,
   publishDraft,
   setDraftCardStatus,
+  type VocabTranche,
+  type VocabularyResult,
 } from './client';
 import type { DraftCardStatus, DraftDetail, DraftSummary, LessonLevel } from './draft-types';
 
@@ -40,6 +43,16 @@ export function useDraft(id: string) {
 export function useGenerateLesson() {
   return useMutation<{ draftId: string }, Error, { topic: string; domainId: string; level: LessonLevel }>({
     mutationFn: (input) => generateSourcedLesson(input),
+  });
+}
+
+/** Génère un brouillon de vocabulaire par tranche de fréquence ; rafraîchit la liste. */
+export function useGenerateVocabulary() {
+  const queryClient = useQueryClient();
+
+  return useMutation<VocabularyResult, Error, { tranche: VocabTranche; domainId: string; batchSize?: number }>({
+    mutationFn: (input) => generateVocabulary(input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: draftsKey }),
   });
 }
 
