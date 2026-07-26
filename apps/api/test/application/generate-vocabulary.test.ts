@@ -38,10 +38,16 @@ function batch(words: readonly string[]): string {
 const TRANCHE = findTranche('1-100')!;
 const DOMAIN = 'dom_anglais';
 
-function setup(responses: readonly string[]) {
+function setup(responses: readonly string[], maxCalls = 1) {
   const drafts = new InMemoryLessonDraftRepository();
   const generator = new VocabularyGenerator(new ScriptedProvider(responses));
-  const useCase = new GenerateVocabulary(generator, drafts, () => new Date('2026-07-26T12:00:00Z'));
+  const useCase = new GenerateVocabulary(
+    generator,
+    drafts,
+    () => new Date('2026-07-26T12:00:00Z'),
+    undefined,
+    maxCalls,
+  );
 
   return { drafts, useCase };
 }
@@ -74,12 +80,15 @@ describe('GenerateVocabulary', () => {
     expect(result.draftId).not.toBeNull();
   });
 
-  it('déduplique aussi entre paquets (même mot proposé deux fois)', async () => {
-    const { useCase } = setup([
-      batch(['the', 'be', 'to']),
-      batch(['to', 'of', 'and']), // "to" déjà pris au paquet 1
-      batch(['of', 'and']), // que des doublons → arrêt anti-boucle
-    ]);
+  it('déduplique entre appels d’une même génération (maxCalls > 1)', async () => {
+    const { useCase } = setup(
+      [
+        batch(['the', 'be', 'to']),
+        batch(['to', 'of', 'and']), // "to" déjà pris à l'appel 1
+        batch(['of', 'and']), // que des doublons → arrêt anti-boucle
+      ],
+      3,
+    );
 
     const result = await useCase.execute({ tranche: TRANCHE, domainId: DOMAIN, createdBy: 'admin' });
 
@@ -88,13 +97,13 @@ describe('GenerateVocabulary', () => {
     expect(result.batches).toBe(3);
   });
 
-  it('s’arrête dès qu’un paquet n’apporte plus aucun mot neuf (anti-boucle)', async () => {
-    const { useCase } = setup([batch(['a', 'b']), batch(['a', 'b'])]);
+  it('s’arrête dès qu’un appel n’apporte plus aucun mot neuf (anti-boucle)', async () => {
+    const { useCase } = setup([batch(['a', 'b']), batch(['a', 'b'])], 3);
 
     const result = await useCase.execute({ tranche: TRANCHE, domainId: DOMAIN, createdBy: 'admin' });
 
     expect(result.created).toBe(2);
-    expect(result.batches).toBe(2); // 2e paquet = que des doublons → break
+    expect(result.batches).toBe(2); // 2e appel = que des doublons → break
   });
 
   it('ne crée pas de brouillon si tous les mots sont déjà connus', async () => {
@@ -127,11 +136,10 @@ describe('GenerateVocabulary', () => {
   it('est additive : ignore les mots déjà présents dans un brouillon ouvert', async () => {
     // 1re génération crée un brouillon avec "the","be". 2e génération (relance)
     // doit ignorer ces mots-là même s'ils ne sont pas encore publiés.
+    // 1 appel par génération (défaut) : un paquet par relance.
     const { drafts, useCase } = setup([
       batch(['the', 'be']),
-      '{"words":[]}',
       batch(['the', 'to']), // relance : "the" déjà en brouillon → ignoré
-      '{"words":[]}',
     ]);
 
     const first = await useCase.execute({ tranche: TRANCHE, domainId: DOMAIN, createdBy: 'admin' });

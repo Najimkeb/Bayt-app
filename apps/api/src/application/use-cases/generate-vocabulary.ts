@@ -33,19 +33,22 @@ export interface GenerateVocabularyResult {
   readonly batches: number;
 }
 
-/**
- * Nombre MAX d'appels LLM PAR requête HTTP.
- *
- * Garde-fou double : (1) une requête ne doit jamais enchaîner assez d'appels
- * pour dépasser le délai de la passerelle (une génération géante synchrone
- * expirait et ne persistait RIEN — quota gaspillé) ; (2) économie de quota.
- * Une génération produit donc **un paquet relisable** (~`batchSize` mots) ; on
- * relance pour la suite de la tranche (dédup additive → jamais de doublon).
- */
-const MAX_CALLS_PER_REQUEST = 3;
-
 /** Plafond de mots « connus » injectés dans le prompt (anti-bloat). */
 const MAX_EXCLUDE_IN_PROMPT = 120;
+
+/**
+ * Nombre d'appels LLM PAR requête HTTP, par défaut **1**.
+ *
+ * Un modèle 70B met ~80 s à rendre un paquet : enchaîner plusieurs appels dans
+ * une même requête dépasserait le délai de la passerelle (la génération géante
+ * synchrone expirait et ne persistait RIEN — quota gaspillé). On produit donc
+ * **un paquet relisable par requête** (~`batchSize` mots neufs) ; l'exclusion des
+ * mots connus dans le prompt fait enchaîner le modèle sur les mots SUIVANTS, si
+ * bien qu'un seul appel suffit à progresser dans la tranche. On relance pour la
+ * suite (dédup additive → jamais de doublon, jamais de boucle automatique).
+ * Les tests injectent une valeur > 1 pour couvrir la dédup inter-appels.
+ */
+const DEFAULT_MAX_CALLS = 1;
 
 /**
  * Cas d'usage « générer un paquet de vocabulaire d'une tranche de fréquence ».
@@ -65,6 +68,8 @@ export class GenerateVocabulary {
     private readonly drafts: LessonDraftRepository,
     private readonly clock: () => Date = () => new Date(),
     private readonly newId: () => string = () => crypto.randomUUID(),
+    /** Appels LLM max par requête (défaut 1 — anti-timeout ; > 1 en test). */
+    private readonly maxCalls: number = DEFAULT_MAX_CALLS,
   ) {}
 
   public async execute(input: GenerateVocabularyInput): Promise<GenerateVocabularyResult> {
@@ -80,7 +85,7 @@ export class GenerateVocabulary {
     let duplicatesSkipped = 0;
     let batches = 0;
 
-    while (collected.length < target && batches < MAX_CALLS_PER_REQUEST) {
+    while (collected.length < target && batches < this.maxCalls) {
       const remaining = target - collected.length;
       // Exclut du prompt les mots connus (échantillon borné) + ceux déjà obtenus.
       const exclude = [...knownRaw.slice(-MAX_EXCLUDE_IN_PROMPT), ...collected.map((w) => w.word)];
