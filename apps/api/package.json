@@ -20,12 +20,14 @@
     "better-auth": "^1.6.25",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.31",
+    "unpdf": "^1.8.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@bayt/config": "workspace:*",
     "@cloudflare/workers-types": "^5.20260722.1",
     "drizzle-kit": "^0.31.10",
+    "pdf-lib": "^1.17.1",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8",
     "wrangler": "^4.113.0"

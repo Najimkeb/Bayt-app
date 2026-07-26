@@ -12,24 +12,8 @@ describe('extractText', () => {
     );
   });
 
-  it('extrait le texte d\'un PDF non compressé (opérateurs Tj)', async () => {
-    // PDF minimal avec un flux de contenu non compressé et deux chaînes.
-    const pdf = [
-      '%PDF-1.4',
-      '1 0 obj << /Length 60 >>',
-      'stream',
-      'BT /F1 12 Tf (La memoire longue duree) Tj (se construit par le rappel) Tj ET',
-      'endstream',
-      'endobj',
-      '%%EOF',
-    ].join('\n');
-
-    const text = await extractText(encode(pdf), 'pdf');
-
-    expect(text).toContain('La memoire longue duree');
-    expect(text).toContain('se construit par le rappel');
-  });
-
+  // L'extraction PDF réelle (unpdf) est couverte par `pdf-extraction.test.ts`
+  // avec de vrais PDF ; ici on vérifie seulement le repli d'échec propre.
   it('échoue proprement si le PDF ne contient pas de texte exploitable', async () => {
     await expect(extractText(encode('%PDF-1.4\n%%EOF'), 'pdf')).rejects.toBeInstanceOf(
       ExtractionError,

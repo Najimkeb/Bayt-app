@@ -55,6 +55,13 @@ export class IngestDocument {
       }
 
       const cards = dedupeCards(generated).slice(0, MAX_CARDS_PER_DOCUMENT);
+
+      // Du texte était présent (l'extraction avait réussi), mais l'agent n'a
+      // produit AUCUNE carte : on échoue explicitement — jamais « ready » à 0.
+      if (cards.length === 0) {
+        throw new Error('Aucune carte n’a pu être générée à partir de ce document.');
+      }
+
       const sourceRef = `doc:${documentId}`;
       const createdAt = this.clock().getTime();
 

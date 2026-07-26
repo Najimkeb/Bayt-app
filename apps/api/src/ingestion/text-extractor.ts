@@ -1,20 +1,37 @@
+import { extractText as extractPdf, getDocumentProxy } from 'unpdf';
+
 import type { DocumentFormat } from './format.js';
 
 /**
  * Extraction du texte d'un document.
  *
  * - texte / Markdown : décodage UTF-8 direct ;
- * - PDF : extraction best-effort (inflate des flux FlateDecode via
- *   `DecompressionStream`, puis lecture des opérateurs de texte). Convient aux
- *   PDF textuels simples ; les PDF scannés ne donnent rien.
+ * - PDF : extraction robuste via **unpdf** (build serverless de PDF.js, sans
+ *   dépendance native — fonctionne dans un Worker edge). Gère le multi-pages et
+ *   le texte réparti sur la page (bandeaux, tableaux).
+ *
+ * **Ne réussit jamais en silence** : un PDF scanné/protégé (ou dont l'extraction
+ * ne rend quasi rien) lève `ExtractionError` avec un motif clair, plutôt que de
+ * renvoyer un texte vide qui donnerait « ready avec 0 carte » plus loin.
  *
  * Point d'extension : Word / PowerPoint viendront s'ajouter dans le `switch`.
  */
 
-/** Erreur : extraction impossible (format non géré, ou aucun texte). */
+/** Erreur : extraction impossible (format non géré, PDF sans texte…). */
 export class ExtractionError extends Error {
   public override readonly name = 'ExtractionError';
 }
+
+/**
+ * Seuil de « texte utile » (caractères hors espaces) sous lequel on considère
+ * l'extraction comme un échec — typiquement un PDF scanné (image sans couche
+ * texte) ou protégé.
+ */
+const MIN_USEFUL_CHARS = 100;
+
+/** Motif utilisateur pour un PDF dont on ne peut rien extraire. */
+const SCANNED_OR_PROTECTED =
+  'Impossible d’extraire le texte de ce PDF — il est peut-être scanné ou protégé.';
 
 export async function extractText(bytes: Uint8Array, format: DocumentFormat): Promise<string> {
   switch (format) {
@@ -31,93 +48,31 @@ export async function extractText(bytes: Uint8Array, format: DocumentFormat): Pr
   }
 }
 
-/** Décompresse un flux zlib (FlateDecode), puis raw deflate en secours. */
-async function inflate(data: Uint8Array): Promise<Uint8Array | null> {
-  for (const fmt of ['deflate', 'deflate-raw'] as const) {
-    try {
-      const source = new Response(copyToArrayBuffer(data)).body;
-      if (source === null) {
-        continue;
-      }
-
-      const decompressed = source.pipeThrough(new DecompressionStream(fmt));
-
-      return new Uint8Array(await new Response(decompressed).arrayBuffer());
-    } catch {
-      // Format suivant.
-    }
-  }
-
-  return null;
-}
-
-/** Copie les octets dans un ArrayBuffer net (évite les vues partielles). */
-function copyToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  const buffer = new ArrayBuffer(bytes.byteLength);
-  new Uint8Array(buffer).set(bytes);
-
-  return buffer;
-}
-
-/** Décode les chaînes des opérateurs de texte d'un flux de contenu PDF. */
-function decodeContentStreams(content: string): string {
-  const out: string[] = [];
-
-  // Chaînes littérales `( … )` — présentes dans Tj / TJ / ' / ".
-  const literal = /\(((?:\\.|[^\\()])*)\)/g;
-  let match: RegExpExecArray | null;
-
-  while ((match = literal.exec(content)) !== null) {
-    const raw = match[1] ?? '';
-    const text = raw
-      .replace(/\\n/g, '\n')
-      .replace(/\\r/g, '')
-      .replace(/\\t/g, ' ')
-      .replace(/\\([()\\])/g, '$1');
-
-    if (text.trim() !== '') {
-      out.push(text);
-    }
-  }
-
-  return out.join(' ');
+/** Nombre de caractères « utiles » (hors espaces) — mesure la matière réelle. */
+function usefulLength(text: string): number {
+  return text.replace(/\s+/g, '').length;
 }
 
 async function extractPdfText(bytes: Uint8Array): Promise<string> {
-  // On parcourt les octets en latin1 pour repérer la structure sans casser le binaire.
-  const latin1 = new TextDecoder('latin1').decode(bytes);
-  const pieces: string[] = [];
+  let merged: string;
 
-  const streamRe = /stream\r?\n/g;
-  let start: RegExpExecArray | null;
-
-  while ((start = streamRe.exec(latin1)) !== null) {
-    const from = start.index + start[0].length;
-    const end = latin1.indexOf('endstream', from);
-    if (end === -1) {
-      break;
-    }
-
-    const header = latin1.slice(Math.max(0, start.index - 400), start.index);
-    const rawSlice = bytes.subarray(from, end);
-
-    if (/FlateDecode/.test(header)) {
-      const inflated = await inflate(rawSlice);
-      if (inflated !== null) {
-        pieces.push(decodeContentStreams(new TextDecoder('latin1').decode(inflated)));
-      }
-    } else {
-      pieces.push(decodeContentStreams(latin1.slice(from, end)));
-    }
-
-    streamRe.lastIndex = end;
+  try {
+    // Copie dans un buffer net : unpdf/PDF.js peut consommer le tampon.
+    const pdf = await getDocumentProxy(new Uint8Array(bytes));
+    const { text } = await extractPdf(pdf, { mergePages: true });
+    // `mergePages: true` → chaîne unique ; on reste défensif si un tableau sort.
+    merged = Array.isArray(text) ? text.join('\n') : text;
+  } catch {
+    // PDF corrompu, chiffré, ou illisible par PDF.js → motif clair, pas de silence.
+    throw new ExtractionError(SCANNED_OR_PROTECTED);
   }
 
-  const text = pieces.join('\n').replace(/[ \t]{2,}/g, ' ').trim();
+  const normalized = merged.replace(/[ \t]{2,}/g, ' ').trim();
 
-  if (text.length < 20) {
-    throw new ExtractionError('Aucun texte exploitable extrait du PDF');
+  // PDF scanné / sans couche texte : PDF.js rend (quasi) rien → échec explicite.
+  if (usefulLength(normalized) < MIN_USEFUL_CHARS) {
+    throw new ExtractionError(SCANNED_OR_PROTECTED);
   }
 
-  return text;
+  return normalized;
 }
