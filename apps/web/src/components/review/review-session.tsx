@@ -11,6 +11,8 @@ import type { ReviewGrade } from '@/lib/api/types';
 import { formatInterval } from '@/lib/format-interval';
 import type { XpRewardData } from '@/components/progress/xp-reward';
 
+import { ExitButton } from '@/components/nav/exit-button';
+
 import { Flashcard } from './flashcard';
 import { GradeButtons } from './grade-buttons';
 import { mascotMessage, moodForGrade } from './mascot-message';
@@ -202,7 +204,16 @@ export function ReviewSession({ domainId }: { domainId?: string | undefined } = 
         />
       )}
 
-      <SessionProgress done={done} total={total} remaining={remaining} />
+      {/* Quitter (en pleine tâche) : confirmation tant qu'il reste des cartes. */}
+      <div className="flex items-center gap-3">
+        <ExitButton
+          confirmWhen={remaining > 0}
+          confirmBody="Les cartes déjà notées sont enregistrées ; les cartes restantes seront à revoir plus tard."
+        />
+        <div className="flex-1">
+          <SessionProgress done={done} total={total} remaining={remaining} />
+        </div>
+      </div>
 
       <AnimatePresence mode="wait">
         <motion.div

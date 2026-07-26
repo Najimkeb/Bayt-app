@@ -13,6 +13,9 @@ const config: NextConfig = {
   /** Le paquet de composants partages est compile depuis le workspace. */
   transpilePackages: ['@bayt/ui'],
   turbopack: { root: monorepoRoot },
+  // L'indicateur de dev flottant chevauchait la barre de navigation basse
+  // (mobile) : on le désactive pour garder le bas de l'écran propre.
+  devIndicators: false,
   // Cache des pages : contrôlé via `public/_headers` (Workers Assets), pas ici —
   // OpenNext sert le HTML statique par le binding Assets, qui court-circuite
   // `headers()` de Next.

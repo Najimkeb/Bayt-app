@@ -11,6 +11,8 @@ import { useCompleteLesson } from '@/lib/api/path-queries';
 import { useIncrementProgress } from '@/lib/api/progress-queries';
 import type { XpRewardData } from '@/components/progress/xp-reward';
 
+import { ExitButton } from '@/components/nav/exit-button';
+
 import { FillBlankExerciseView } from './exercises/fill-blank-exercise';
 import { MatchingExerciseView } from './exercises/matching-exercise';
 import { McqExerciseView } from './exercises/mcq-exercise';
@@ -159,19 +161,26 @@ export function LessonSession({ lessonId }: { lessonId: string }): ReactElement 
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-5 sm:gap-6">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-baseline justify-between gap-3">
-          <h1 className="truncate text-lg font-extrabold tracking-tight sm:text-xl">
-            {lesson.data.title}
-          </h1>
-          <p className="shrink-0 text-sm font-bold tabular-nums text-muted-foreground">
-            {done} / {total}
-          </p>
-        </div>
-        <ProgressBar
-          value={total === 0 ? 0 : done / total}
-          label={`${String(done)} exercice(s) réussi(s) sur ${String(total)}`}
+      <div className="flex items-center gap-3">
+        {/* Quitter (en pleine tâche) : confirmation, la leçon n'est pas terminée. */}
+        <ExitButton
+          confirmWhen={remaining > 0}
+          confirmBody="Cette leçon n'est pas terminée : ta progression dans la leçon ne sera pas conservée."
         />
+        <div className="flex flex-1 flex-col gap-2">
+          <div className="flex items-baseline justify-between gap-3">
+            <h1 className="truncate text-lg font-extrabold tracking-tight sm:text-xl">
+              {lesson.data.title}
+            </h1>
+            <p className="shrink-0 text-sm font-bold tabular-nums text-muted-foreground">
+              {done} / {total}
+            </p>
+          </div>
+          <ProgressBar
+            value={total === 0 ? 0 : done / total}
+            label={`${String(done)} exercice(s) réussi(s) sur ${String(total)}`}
+          />
+        </div>
       </div>
 
       <AnimatePresence mode="wait">
