@@ -119,4 +119,43 @@ describe('IngestDocument (consumer)', () => {
   it('ne fait rien pour un document inconnu', async () => {
     await expect(ingest.execute('inexistant')).resolves.toBeUndefined();
   });
+
+  it('persiste TOUTES les cartes d’un gros document (40+) sans en perdre', async () => {
+    // Provider renvoyant 6 cartes UNIQUES par appel (une par section) : de quoi
+    // dépasser largement une seule requête d'insert (chunking obligatoire).
+    let n = 0;
+    const many: LLMProvider = {
+      complete: () => {
+        const cards = Array.from({ length: 6 }, () => {
+          n += 1;
+          return { front: `Question ${String(n)} ?`, back: `Réponse ${String(n)}.` };
+        });
+
+        return Promise.resolve(JSON.stringify({ cards }));
+      },
+    };
+    // ~10 sections (texte long) → ~60 cartes générées, plafonnées à 40.
+    const paragraph = 'Le rappel actif renforce durablement la mémoire à long terme. '.repeat(20);
+    const longText = Array.from({ length: 10 }, (_v, i) => `Section ${String(i)}. ${paragraph}`).join('\n\n');
+
+    const doc = await submit.execute({
+      userId: 'demo',
+      filename: 'gros.md',
+      contentType: 'text/markdown',
+      bytes: encode(longText),
+      domainId: 'dom_apprendre',
+    });
+
+    const bigIngest = new IngestDocument(docs, storage, new CardGenerator(many), () => NOW, () =>
+      `card-${String(idCounter++)}`,
+    );
+    await bigIngest.execute(doc.id);
+
+    const updated = await docs.findById(doc.id);
+    expect(updated?.status).toBe('ready');
+    // Plafond du pipeline = 40 cartes.
+    expect(updated?.cardCount).toBe(40);
+    // Le compte réellement enregistré correspond au statut.
+    expect(docs.itemsForSource(`doc:${doc.id}`)).toHaveLength(40);
+  });
 });

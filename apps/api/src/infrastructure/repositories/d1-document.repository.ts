@@ -6,22 +6,10 @@ import type {
   DocumentStatusPatch,
 } from '../../application/ports/document-repository.js';
 import type { DocumentRecord, LearningItemRecord } from '../../ingestion/document.js';
+import { chunkForInsert } from '../db/chunk.js';
 import { documents, learningItems, reviewLogs, schedulingState } from '../db/schema.js';
 
 type DocumentRow = typeof documents.$inferSelect;
-
-/** Cartes par requête d'insert : 6 colonnes × 16 = 96 paramètres (< 100, limite D1). */
-const INSERT_CHUNK_SIZE = 16;
-
-/** Découpe un tableau en tranches de taille `size` (dernière tranche plus courte). */
-function chunk<T>(items: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    chunks.push(items.slice(i, i + size));
-  }
-
-  return chunks;
-}
 
 /** Implémentation D1 (via Drizzle) de la persistance des documents. */
 export class D1DocumentRepository implements DocumentRepository {
@@ -63,12 +51,12 @@ export class D1DocumentRepository implements DocumentRepository {
     sourceRef: string,
     items: readonly LearningItemRecord[],
   ): Promise<void> {
-    // D1 plafonne à 100 paramètres liés par requête. Une carte = 6 colonnes, donc
-    // 16 cartes/insert (96 paramètres) restent sous la limite. Sans ce
-    // découpage, un document produisant plus de 16 cartes échoue à l'insert
-    // (« too many SQL variables »). On regroupe la purge et les inserts dans un
-    // seul `batch` atomique : l'ancien lot n'est jamais supprimé sans le nouveau.
-    const inserts = chunk([...items], INSERT_CHUNK_SIZE).map((rows) =>
+    // D1 plafonne les paramètres liés par requête : on découpe en lots calculés
+    // depuis le nombre de colonnes de `learning_items` (cf. `chunkForInsert`),
+    // pour ne jamais dépasser la limite — quelle que soit l'évolution du schéma.
+    // Purge + inserts dans un `batch` **atomique** : l'ancien lot n'est jamais
+    // supprimé sans que le nouveau soit inséré (tout-ou-rien).
+    const inserts = chunkForInsert(items, learningItems).map((rows) =>
       this.db.insert(learningItems).values(rows),
     );
 

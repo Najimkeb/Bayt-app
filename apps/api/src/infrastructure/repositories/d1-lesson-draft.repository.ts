@@ -9,19 +9,8 @@ import type {
   LessonDraftRepository,
 } from '../../application/ports/lesson-draft-repository.js';
 import type { LearningItemRecord } from '../../ingestion/document.js';
+import { chunkForInsert } from '../db/chunk.js';
 import { draftCards, learningItems, lessonDrafts } from '../db/schema.js';
-
-/** learning_items : 7 colonnes × 14 = 98 paramètres (< 100, limite D1). */
-const INSERT_CHUNK_SIZE = 14;
-
-function chunk<T>(items: readonly T[], size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    out.push(items.slice(i, i + size));
-  }
-
-  return out;
-}
 
 /** Implémentation D1 (via Drizzle) des brouillons de leçons sourcées. */
 export class D1LessonDraftRepository implements LessonDraftRepository {
@@ -31,7 +20,7 @@ export class D1LessonDraftRepository implements LessonDraftRepository {
     const inserts =
       cards.length === 0
         ? []
-        : chunk(cards, INSERT_CHUNK_SIZE).map((rows) => this.db.insert(draftCards).values(rows));
+        : chunkForInsert(cards, draftCards).map((rows) => this.db.insert(draftCards).values(rows));
 
     await this.db.batch([this.db.insert(lessonDrafts).values(draft), ...inserts]);
   }
@@ -106,7 +95,7 @@ export class D1LessonDraftRepository implements LessonDraftRepository {
     const inserts =
       items.length === 0
         ? []
-        : chunk(items, INSERT_CHUNK_SIZE).map((rows) => this.db.insert(learningItems).values(rows));
+        : chunkForInsert(items, learningItems).map((rows) => this.db.insert(learningItems).values(rows));
 
     await this.db.batch([
       this.db
