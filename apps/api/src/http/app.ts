@@ -41,9 +41,8 @@ import { PublishLessonDraft } from '../application/use-cases/publish-lesson-draf
 import { CardAuditor } from '../ingestion/sourced/card-auditor.js';
 import type { WebSearchProvider } from '../ingestion/sourced/search-provider.js';
 import { SourcedCardGenerator, SourcedGenerationError } from '../ingestion/sourced/sourced-card-generator.js';
-import { VocabularyGenerator, VocabGenerationError } from '../ingestion/vocab/vocabulary-generator.js';
 import { findTranche } from '../ingestion/vocab/tranches.js';
-import { GenerateVocabulary } from '../application/use-cases/generate-vocabulary.js';
+import { StartVocabularyGeneration } from '../application/use-cases/generate-vocabulary.js';
 import type { LLMProvider } from '../ingestion/llm/provider.js';
 import { presentDraft, presentDraftSummary } from './draft-dto.js';
 import {
@@ -732,14 +731,14 @@ export function createApp({
     });
 
     /**
-     * Génère un brouillon de **vocabulaire** par tranche de fréquence.
-     *
-     * N'exige PAS la recherche web (les mots viennent du LLM d'après les listes
-     * de fréquence standard) — juste un provider LLM. Dédup + paquets bornés.
+     * Lance une génération de **vocabulaire** par tranche de fréquence, en
+     * **asynchrone** : crée un brouillon `generating`, met le job en file et rend
+     * la main (202). Le consumer génère puis finalise le brouillon. N'exige pas la
+     * recherche web (les mots viennent du LLM) — juste la file de traitement.
      */
     app.post('/admin/lessons/vocabulary', async (context) => {
-      if (sourcedLlmProvider === undefined) {
-        return context.json({ error: 'llm_not_configured' }, 501);
+      if (ingestionQueue === undefined) {
+        return context.json({ error: 'queue_not_configured' }, 501);
       }
 
       const body = generateVocabularyBodySchema.safeParse(await readJson(context.req.raw));
@@ -752,28 +751,15 @@ export function createApp({
         return context.json({ error: 'unknown_tranche' }, 400);
       }
 
-      const generate = new GenerateVocabulary(
-        new VocabularyGenerator(sourcedLlmProvider),
-        lessonDraftRepository,
-        clock,
-      );
+      const start = new StartVocabularyGeneration(lessonDraftRepository, ingestionQueue, clock);
+      const { draftId } = await start.execute({
+        tranche,
+        domainId: body.data.domainId,
+        createdBy: context.get('userId'),
+        batchSize: body.data.batchSize,
+      });
 
-      try {
-        const result = await generate.execute({
-          tranche,
-          domainId: body.data.domainId,
-          createdBy: context.get('userId'),
-          batchSize: body.data.batchSize,
-        });
-
-        return context.json(result, 201);
-      } catch (error) {
-        if (error instanceof VocabGenerationError) {
-          return context.json({ error: 'generation_failed', detail: error.message }, 422);
-        }
-
-        throw error;
-      }
+      return context.json({ draftId, status: 'generating' }, 202);
     });
 
     /** Brouillons existants (studio). */

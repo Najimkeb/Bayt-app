@@ -13,7 +13,7 @@ import {
   publishDraft,
   setDraftCardStatus,
   type VocabTranche,
-  type VocabularyResult,
+  type VocabularyStarted,
 } from './client';
 import type { DraftCardStatus, DraftDetail, DraftSummary, LessonLevel } from './draft-types';
 
@@ -36,6 +36,9 @@ export function useDraft(id: string) {
     queryKey: draftKey(id),
     queryFn: () => fetchDraft(id),
     retry: false,
+    // Génération asynchrone : tant que le brouillon est en cours, on interroge
+    // régulièrement jusqu'à ce que le consumer le finalise (draft/failed).
+    refetchInterval: (query) => (query.state.data?.status === 'generating' ? 2500 : false),
   });
 }
 
@@ -46,11 +49,11 @@ export function useGenerateLesson() {
   });
 }
 
-/** Génère un brouillon de vocabulaire par tranche de fréquence ; rafraîchit la liste. */
+/** Lance une génération de vocabulaire (asynchrone) ; rafraîchit la liste. */
 export function useGenerateVocabulary() {
   const queryClient = useQueryClient();
 
-  return useMutation<VocabularyResult, Error, { tranche: VocabTranche; domainId: string; batchSize?: number }>({
+  return useMutation<VocabularyStarted, Error, { tranche: VocabTranche; domainId: string; batchSize?: number }>({
     mutationFn: (input) => generateVocabulary(input),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: draftsKey }),
   });

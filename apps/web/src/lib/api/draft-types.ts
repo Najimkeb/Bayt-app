@@ -8,7 +8,11 @@
 export type LessonLevel = 'beginner' | 'intermediate' | 'advanced';
 export type AuditVerdict = 'ok' | 'to_verify' | 'unsupported';
 export type DraftCardStatus = 'to_review' | 'validated';
-export type DraftStatus = 'draft' | 'published';
+/**
+ * `generating` : génération asynchrone en cours (vocabulaire) ; `draft` : prêt à
+ * relire ; `published` : publié ; `failed` : génération échouée (voir `error`).
+ */
+export type DraftStatus = 'generating' | 'draft' | 'published' | 'failed';
 
 export interface DraftCard {
   readonly id: string;
@@ -27,6 +31,8 @@ export interface DraftDetail {
   readonly domainId: string;
   readonly level: LessonLevel;
   readonly status: DraftStatus;
+  /** Motif d'échec (statut `failed`), sinon `null`. */
+  readonly error: string | null;
   /** Domaine sensible (droit/santé/finance) → avertissement permanent. */
   readonly sensitive: boolean;
   readonly createdAt: string;
@@ -39,6 +45,7 @@ export interface DraftSummary {
   readonly domainId: string;
   readonly level: LessonLevel;
   readonly status: DraftStatus;
+  readonly error: string | null;
   readonly cardCount: number;
   readonly createdAt: string;
 }

@@ -43,7 +43,7 @@ describe('POST /documents', () => {
     const body = (await response.json()) as { id: string; status: string; format: string };
     expect(body.status).toBe('pending');
     expect(body.format).toBe('markdown');
-    expect(queue.sent).toEqual([{ documentId: body.id }]);
+    expect(queue.sent).toEqual([{ kind: 'ingest', documentId: body.id }]);
   });
 
   it('refuse un format non pris en charge (415)', async () => {

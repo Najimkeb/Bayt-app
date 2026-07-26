@@ -2,12 +2,12 @@
 
 import { Button } from '@bayt/ui';
 import { Languages } from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useId, useMemo, useState, type FormEvent, type ReactElement } from 'react';
 
 import { useDomains } from '@/lib/api/domain-queries';
 import { useGenerateVocabulary } from '@/lib/api/studio-queries';
-import type { VocabTranche, VocabularyResult } from '@/lib/api/client';
+import type { VocabTranche } from '@/lib/api/client';
 import { useUserId } from '@/lib/auth/use-user-id';
 
 /** Tranches de fréquence (miroir du serveur) — bornes de rang + libellé. */
@@ -27,20 +27,19 @@ const DEFAULT_DOMAIN = 'dom_anglais';
 /**
  * Générateur de vocabulaire par tranche de fréquence.
  *
- * L'admin choisit une tranche (mots par ordre d'utilité), voit une **estimation**
- * (mots visés + appels IA), génère par paquets, puis obtient un **récap** (créés /
- * déjà connus ignorés) et relit le brouillon avant publication. Économie de quota :
- * jamais de relance automatique en boucle.
+ * L'admin choisit une tranche (mots par ordre d'utilité), voit une **estimation**,
+ * lance la génération (**asynchrone** via la file) et est amené droit au brouillon,
+ * qui se remplit puis passe en relecture. Rien n'entre en mémoire sans validation.
  */
 export function VocabPanel(): ReactElement {
   const ids = useId();
+  const router = useRouter();
   const userId = useUserId();
   const domains = useDomains(userId);
   const generate = useGenerateVocabulary();
 
   const [trancheId, setTrancheId] = useState<VocabTranche>('1-100');
   const [domainId, setDomainId] = useState('');
-  const [recap, setRecap] = useState<VocabularyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const domainList = domains.data?.domains ?? [];
@@ -57,16 +56,17 @@ export function VocabPanel(): ReactElement {
   function onSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     setError(null);
-    setRecap(null);
     generate.mutate(
       { tranche: trancheId, domainId: effectiveDomain },
       {
-        onSuccess: (result) => setRecap(result),
+        // La génération tourne en tâche de fond : on ouvre le brouillon, qui
+        // affiche « génération en cours » puis se remplit tout seul.
+        onSuccess: ({ draftId }) => router.push(`/admin/lessons/${draftId}`),
         onError: (err) =>
           setError(
             err.message === '501'
-              ? 'Aucun modèle IA configuré côté serveur.'
-              : 'La génération a échoué. Réessaie.',
+              ? 'File de traitement non configurée côté serveur.'
+              : 'Le lancement a échoué. Réessaie.',
           ),
       },
     );
@@ -126,9 +126,8 @@ export function VocabPanel(): ReactElement {
 
       {/* Estimation avant génération (économie de quota). */}
       <p className="rounded-[var(--radius-button)] bg-surface-hover/60 px-3 py-2 text-xs font-bold text-muted-foreground">
-        Estimation : ~{BATCH_SIZE} mots par génération (1 à 3 appels IA). Cette tranche compte ≈
-        {trancheWords} mots au total — relance pour la couvrir, sans doublon (les mots déjà connus
-        sont ignorés).
+        ~{BATCH_SIZE} mots par génération (en tâche de fond). Cette tranche compte ≈{trancheWords}{' '}
+        mots au total — relance pour la couvrir, sans doublon (les mots déjà connus sont ignorés).
       </p>
 
       {error !== null && (
@@ -145,44 +144,8 @@ export function VocabPanel(): ReactElement {
         className="self-start"
       >
         <Languages aria-hidden="true" className="size-4" />
-        {generate.isPending ? 'Génération…' : 'Générer le vocabulaire'}
+        {generate.isPending ? 'Lancement…' : 'Générer le vocabulaire'}
       </Button>
-
-      {recap !== null && <Recap recap={recap} />}
     </form>
-  );
-}
-
-/** Récapitulatif après génération : créés / ignorés + lien de relecture. */
-function Recap({ recap }: { recap: VocabularyResult }): ReactElement {
-  return (
-    <div
-      role="status"
-      className="flex flex-col gap-2 rounded-[var(--radius-button)] border-2 border-feather-green/40 bg-feather-green/10 p-3"
-    >
-      <p className="text-sm font-extrabold">
-        {recap.created} nouveau{recap.created > 1 ? 'x' : ''} mot{recap.created > 1 ? 's' : ''}
-        {recap.duplicatesSkipped > 0 &&
-          ` · ${String(recap.duplicatesSkipped)} déjà connu${recap.duplicatesSkipped > 1 ? 's' : ''} ignoré${recap.duplicatesSkipped > 1 ? 's' : ''}`}
-        {` · ${String(recap.batches)} appel${recap.batches > 1 ? 's' : ''} IA`}
-      </p>
-      {recap.draftId !== null ? (
-        <>
-          <Link
-            href={`/admin/lessons/${recap.draftId}`}
-            className="w-fit text-sm font-extrabold text-macaw underline underline-offset-2"
-          >
-            Relire et valider le brouillon →
-          </Link>
-          <p className="text-xs font-bold text-muted-foreground">
-            Relance pour les mots suivants de la tranche (les mots de ce brouillon seront ignorés).
-          </p>
-        </>
-      ) : (
-        <p className="text-xs font-bold text-muted-foreground">
-          Aucun nouveau mot : cette tranche est déjà couverte dans ce domaine.
-        </p>
-      )}
-    </div>
   );
 }

@@ -24,6 +24,8 @@ export interface DraftDto {
   readonly domainId: string;
   readonly level: DraftRecord['level'];
   readonly status: DraftRecord['status'];
+  /** Motif d'échec (statut `failed`), sinon `null`. */
+  readonly error: string | null;
   /** Domaine sensible (droit/santé/finance) → avertissement permanent. */
   readonly sensitive: boolean;
   readonly createdAt: string;
@@ -37,6 +39,7 @@ export interface DraftSummaryDto {
   readonly domainId: string;
   readonly level: DraftRecord['level'];
   readonly status: DraftRecord['status'];
+  readonly error: string | null;
   readonly cardCount: number;
   readonly createdAt: string;
 }
@@ -61,6 +64,7 @@ export function presentDraft(draft: DraftRecord, cards: readonly DraftCardRecord
     domainId: draft.domainId,
     level: draft.level,
     status: draft.status,
+    error: draft.error,
     sensitive: isSensitiveDomain(draft.domainId),
     createdAt: new Date(draft.createdAt).toISOString(),
     cards: cards.map(presentDraftCard),
@@ -74,6 +78,7 @@ export function presentDraftSummary(summary: DraftSummary): DraftSummaryDto {
     domainId: summary.domainId,
     level: summary.level,
     status: summary.status,
+    error: summary.error,
     cardCount: summary.cardCount,
     createdAt: new Date(summary.createdAt).toISOString(),
   };

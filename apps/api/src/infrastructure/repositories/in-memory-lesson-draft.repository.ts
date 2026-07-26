@@ -23,6 +23,24 @@ export class InMemoryLessonDraftRepository implements LessonDraftRepository {
     return Promise.resolve();
   }
 
+  public completeDraft(
+    draftId: string,
+    cards: readonly DraftCardRecord[],
+    status: 'draft' | 'failed',
+    error: string | null,
+    now: number,
+  ): Promise<void> {
+    const draft = this.#drafts.get(draftId);
+    if (draft !== undefined) {
+      this.#drafts.set(draftId, { ...draft, status, error, updatedAt: now });
+    }
+    for (const card of cards) {
+      this.#cards.set(card.id, card);
+    }
+
+    return Promise.resolve();
+  }
+
   public listDrafts(): Promise<readonly DraftSummary[]> {
     const summaries = [...this.#drafts.values()]
       .map((draft) => ({

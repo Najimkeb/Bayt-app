@@ -250,22 +250,22 @@ export function generateSourcedLesson(input: {
 /** Identifiant d'une tranche de fréquence de vocabulaire. */
 export type VocabTranche = '1-100' | '100-300' | '300-600' | '600-1000';
 
-/** Récap d'une génération de vocabulaire (économie de quota). */
-export interface VocabularyResult {
-  readonly draftId: string | null;
-  readonly requested: number;
-  readonly created: number;
-  readonly duplicatesSkipped: number;
-  readonly batches: number;
+/** Accusé de lancement d'une génération de vocabulaire (asynchrone). */
+export interface VocabularyStarted {
+  readonly draftId: string;
+  readonly status: 'generating';
 }
 
-/** Génère un brouillon de vocabulaire par tranche de fréquence ; renvoie le récap. */
+/**
+ * Lance une génération de vocabulaire (asynchrone via la file) et renvoie le
+ * brouillon `generating` à ouvrir : il se remplira quand le consumer aura fini.
+ */
 export function generateVocabulary(input: {
   tranche: VocabTranche;
   domainId: string;
   batchSize?: number;
-}): Promise<VocabularyResult> {
-  return request<VocabularyResult>('/admin/lessons/vocabulary', {
+}): Promise<VocabularyStarted> {
+  return request<VocabularyStarted>('/admin/lessons/vocabulary', {
     method: 'POST',
     body: JSON.stringify(input),
   });

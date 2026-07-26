@@ -1,7 +1,7 @@
 'use client';
 
 import { Button, Mascot } from '@bayt/ui';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState, type ReactElement } from 'react';
 
@@ -35,6 +35,16 @@ export function DraftReviewScreen({ draftId }: { draftId: string }): ReactElemen
   }
 
   const data = draft.data;
+
+  // Génération asynchrone (vocabulaire) : le brouillon se remplit en tâche de
+  // fond ; `useDraft` interroge jusqu'à la finalisation.
+  if (data.status === 'generating') {
+    return <Generating topic={data.topic} />;
+  }
+  if (data.status === 'failed') {
+    return <Failed topic={data.topic} error={data.error} />;
+  }
+
   const validated = data.cards.filter((c) => c.status === 'validated').length;
   const isPublished = data.status === 'published';
 
@@ -170,6 +180,54 @@ function Skeleton(): ReactElement {
         <div key={i} className="h-40 animate-pulse rounded-[var(--radius-card)] bg-surface-hover" />
       ))}
       <span className="sr-only">Chargement du brouillon.</span>
+    </div>
+  );
+}
+
+/** Brouillon en cours de génération (asynchrone) — l'écran s'actualise seul. */
+function Generating({ topic }: { topic: string }): ReactElement {
+  return (
+    <div className="flex w-full max-w-2xl flex-col gap-6">
+      <Link href="/admin" className="text-sm font-extrabold text-macaw underline underline-offset-2">
+        ← Admin
+      </Link>
+      <div
+        className="flex flex-col items-center gap-4 rounded-[var(--radius-card)] border-2 border-border bg-surface p-8 text-center"
+        role="status"
+        aria-live="polite"
+      >
+        <Loader2 aria-hidden="true" className="size-8 animate-spin text-macaw" />
+        <h1 className="text-xl font-black tracking-tight">{topic}</h1>
+        <p className="text-sm font-bold text-muted-foreground">
+          Génération en cours… BAYT prépare les mots. Cet écran s&apos;actualise tout seul.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Génération échouée : motif + relance possible. */
+function Failed({ topic, error }: { topic: string; error: string | null }): ReactElement {
+  return (
+    <div className="flex w-full max-w-2xl flex-col gap-6">
+      <Link href="/admin" className="text-sm font-extrabold text-macaw underline underline-offset-2">
+        ← Admin
+      </Link>
+      <div
+        className="flex flex-col items-start gap-3 rounded-[var(--radius-card)] border-2 border-cardinal/40 bg-cardinal/10 p-6"
+        role="alert"
+      >
+        <div className="flex items-center gap-2">
+          <AlertTriangle aria-hidden="true" className="size-5 text-cardinal" />
+          <h1 className="text-lg font-black tracking-tight">{topic}</h1>
+        </div>
+        <p className="text-sm font-bold text-muted-foreground">
+          {error ?? 'La génération a échoué. Réessaie depuis le studio.'}
+        </p>
+        <Link href="/admin" className="text-sm font-extrabold text-macaw underline underline-offset-2">
+          Retour au studio
+        </Link>
+      </div>
     </div>
   );
 }

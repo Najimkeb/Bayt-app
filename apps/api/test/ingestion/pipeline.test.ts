@@ -56,7 +56,7 @@ describe('SubmitDocument', () => {
     expect(doc.status).toBe('pending');
     expect(doc.format).toBe('markdown');
     // La file ne transporte que l'id (pas le texte).
-    expect(queue.sent).toEqual([{ documentId: doc.id }]);
+    expect(queue.sent).toEqual([{ kind: 'ingest', documentId: doc.id }]);
     // Le texte extrait est stocké, relisible par le consumer via l'id.
     await expect(storage.get(doc.id)).resolves.toContain('Contenu.');
   });

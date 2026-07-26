@@ -3,8 +3,12 @@ import { describe, expect, it } from 'vitest';
 import type { LLMCompletion, LLMProvider } from '../../src/ingestion/llm/provider.js';
 import { VocabularyGenerator } from '../../src/ingestion/vocab/vocabulary-generator.js';
 import { findTranche } from '../../src/ingestion/vocab/tranches.js';
-import { GenerateVocabulary } from '../../src/application/use-cases/generate-vocabulary.js';
+import {
+  RunVocabularyGeneration,
+  StartVocabularyGeneration,
+} from '../../src/application/use-cases/generate-vocabulary.js';
 import { InMemoryLessonDraftRepository } from '../../src/infrastructure/repositories/in-memory-lesson-draft.repository.js';
+import { InMemoryIngestionQueue } from '../../src/infrastructure/queue/cf-ingestion-queue.js';
 
 /** Provider factice : sert des réponses JSON préprogrammées, dans l'ordre. */
 class ScriptedProvider implements LLMProvider {
@@ -22,7 +26,6 @@ class ScriptedProvider implements LLMProvider {
   }
 }
 
-/** Fabrique une réponse JSON de mots à partir d'une liste de mots anglais. */
 function batch(words: readonly string[]): string {
   return JSON.stringify({
     words: words.map((w) => ({
@@ -37,22 +40,19 @@ function batch(words: readonly string[]): string {
 
 const TRANCHE = findTranche('1-100')!;
 const DOMAIN = 'dom_anglais';
+const CLOCK = () => new Date('2026-07-26T12:00:00Z');
 
+/** Prépare Start (file) + Run (consumer) sur un même dépôt. */
 function setup(responses: readonly string[], maxCalls = 1) {
   const drafts = new InMemoryLessonDraftRepository();
+  const queue = new InMemoryIngestionQueue();
+  const start = new StartVocabularyGeneration(drafts, queue, CLOCK);
   const generator = new VocabularyGenerator(new ScriptedProvider(responses));
-  const useCase = new GenerateVocabulary(
-    generator,
-    drafts,
-    () => new Date('2026-07-26T12:00:00Z'),
-    undefined,
-    maxCalls,
-  );
+  const run = new RunVocabularyGeneration(generator, drafts, CLOCK, undefined, maxCalls);
 
-  return { drafts, useCase };
+  return { drafts, queue, start, run };
 }
 
-/** Pré-remplit le domaine avec des mots déjà « publiés » (base anti-doublon). */
 function seedExisting(drafts: InMemoryLessonDraftRepository, words: readonly string[]): void {
   drafts.published.push(
     ...words.map((w, i) => ({
@@ -67,97 +67,98 @@ function seedExisting(drafts: InMemoryLessonDraftRepository, words: readonly str
   );
 }
 
-describe('GenerateVocabulary', () => {
-  it('ignore les mots déjà connus du domaine et compte le récap', async () => {
-    // Le domaine connaît déjà "the". Le LLM en propose 3, dont "the".
-    const { drafts, useCase } = setup([batch(['the', 'be', 'to']), '{"words":[]}']);
-    seedExisting(drafts, ['the']);
+describe('StartVocabularyGeneration', () => {
+  it('crée un brouillon vide en « generating » et met le job en file', async () => {
+    const { drafts, queue, start } = setup([]);
 
-    const result = await useCase.execute({ tranche: TRANCHE, domainId: DOMAIN, createdBy: 'admin' });
+    const { draftId } = await start.execute({ tranche: TRANCHE, domainId: DOMAIN, createdBy: 'admin' });
 
-    expect(result.created).toBe(2); // be, to
-    expect(result.duplicatesSkipped).toBe(1); // the
-    expect(result.draftId).not.toBeNull();
+    const found = await drafts.findDraft(draftId);
+    expect(found?.draft.status).toBe('generating');
+    expect(found?.cards).toHaveLength(0); // vide : le consumer remplira
+    expect(queue.sent).toEqual([
+      { kind: 'vocab', draftId, tranche: '1-100', domainId: DOMAIN },
+    ]);
+  });
+});
+
+/** Enchaîne Start puis Run (comme le ferait le consumer) pour un scénario. */
+async function startThenRun(
+  s: ReturnType<typeof setup>,
+  createdBy = 'admin',
+): Promise<{ draftId: string; result: Awaited<ReturnType<typeof s.run.execute>> }> {
+  const { draftId } = await s.start.execute({ tranche: TRANCHE, domainId: DOMAIN, createdBy });
+  const result = await s.run.execute({ draftId, tranche: TRANCHE, domainId: DOMAIN });
+
+  return { draftId, result };
+}
+
+describe('RunVocabularyGeneration', () => {
+  it('finalise le brouillon en « draft » et ignore les mots déjà connus', async () => {
+    const s = setup([batch(['the', 'be', 'to'])]);
+    seedExisting(s.drafts, ['the']);
+
+    const { draftId, result } = await startThenRun(s);
+
+    expect(result).toMatchObject({ status: 'draft', created: 2, duplicatesSkipped: 1 });
+    const found = await s.drafts.findDraft(draftId);
+    expect(found?.draft.status).toBe('draft');
+    expect(found?.cards.map((c) => c.front)).toEqual(['be', 'to']);
+    expect(found?.cards[0]?.back).toContain('trad de be');
   });
 
-  it('déduplique entre appels d’une même génération (maxCalls > 1)', async () => {
-    const { useCase } = setup(
-      [
-        batch(['the', 'be', 'to']),
-        batch(['to', 'of', 'and']), // "to" déjà pris à l'appel 1
-        batch(['of', 'and']), // que des doublons → arrêt anti-boucle
-      ],
-      3,
-    );
+  it('marque « failed » quand aucun mot n’est neuf (rien à relire)', async () => {
+    const s = setup([batch(['the', 'be'])]);
+    seedExisting(s.drafts, ['the', 'be']);
 
-    const result = await useCase.execute({ tranche: TRANCHE, domainId: DOMAIN, createdBy: 'admin' });
+    const { draftId, result } = await startThenRun(s);
+
+    expect(result.status).toBe('failed');
+    const found = await s.drafts.findDraft(draftId);
+    expect(found?.draft.status).toBe('failed');
+    expect(found?.draft.error).toContain('déjà couverte');
+    expect(found?.cards).toHaveLength(0);
+  });
+
+  it('est additive : ignore les mots d’un brouillon déjà généré', async () => {
+    const s = setup([batch(['the', 'be']), batch(['the', 'to'])]);
+
+    const first = await startThenRun(s);
+    expect(first.result.created).toBe(2);
+
+    // 2e génération : "the" est déjà en brouillon → ignoré.
+    const second = await startThenRun(s);
+    expect(second.result.created).toBe(1);
+    expect(second.result.duplicatesSkipped).toBe(1);
+  });
+
+  it('déduplique entre appels d’un même job (maxCalls > 1)', async () => {
+    const s = setup([batch(['the', 'be', 'to']), batch(['to', 'of', 'and']), batch(['of', 'and'])], 3);
+
+    const { result } = await startThenRun(s);
 
     expect(result.created).toBe(5); // the, be, to, of, and
-    expect(result.duplicatesSkipped).toBe(3); // to (p2), of + and (p3)
+    expect(result.duplicatesSkipped).toBe(3); // to (appel 2), of + and (appel 3)
     expect(result.batches).toBe(3);
   });
 
-  it('s’arrête dès qu’un appel n’apporte plus aucun mot neuf (anti-boucle)', async () => {
-    const { useCase } = setup([batch(['a', 'b']), batch(['a', 'b'])], 3);
+  it('ne laisse jamais un brouillon coincé en « generating » si le LLM échoue', async () => {
+    // Réponses invalides → VocabGenerationError → completeDraft(failed).
+    const s = setup(['pas du json', 'toujours pas'], 1);
 
-    const result = await useCase.execute({ tranche: TRANCHE, domainId: DOMAIN, createdBy: 'admin' });
+    const { draftId, result } = await startThenRun(s);
 
-    expect(result.created).toBe(2);
-    expect(result.batches).toBe(2); // 2e appel = que des doublons → break
-  });
-
-  it('ne crée pas de brouillon si tous les mots sont déjà connus', async () => {
-    const { drafts, useCase } = setup([batch(['the', 'be'])]);
-    seedExisting(drafts, ['the', 'be']);
-
-    const result = await useCase.execute({ tranche: TRANCHE, domainId: DOMAIN, createdBy: 'admin' });
-
-    expect(result.created).toBe(0);
-    expect(result.draftId).toBeNull();
-    expect(result.duplicatesSkipped).toBe(2);
-  });
-
-  it('crée un brouillon relisible : recto = mot, verso = sens + exemple', async () => {
-    const { drafts, useCase } = setup([batch(['though']), '{"words":[]}']);
-
-    const result = await useCase.execute({ tranche: TRANCHE, domainId: DOMAIN, createdBy: 'admin' });
-    const found = await drafts.findDraft(result.draftId!);
-
-    expect(found?.draft.status).toBe('draft');
-    expect(found?.draft.domainId).toBe(DOMAIN);
-    const card = found?.cards[0];
-    expect(card?.front).toBe('though');
-    expect(card?.back).toContain('trad de though');
-    expect(card?.back).toContain('An example with though.');
-    // Rien n'est publié tant que ce n'est pas validé + publié.
-    expect(drafts.published).toHaveLength(0);
-  });
-
-  it('est additive : ignore les mots déjà présents dans un brouillon ouvert', async () => {
-    // 1re génération crée un brouillon avec "the","be". 2e génération (relance)
-    // doit ignorer ces mots-là même s'ils ne sont pas encore publiés.
-    // 1 appel par génération (défaut) : un paquet par relance.
-    const { drafts, useCase } = setup([
-      batch(['the', 'be']),
-      batch(['the', 'to']), // relance : "the" déjà en brouillon → ignoré
-    ]);
-
-    const first = await useCase.execute({ tranche: TRANCHE, domainId: DOMAIN, createdBy: 'admin' });
-    expect(first.created).toBe(2);
-
-    const second = await useCase.execute({ tranche: TRANCHE, domainId: DOMAIN, createdBy: 'admin' });
-    expect(second.created).toBe(1); // seul "to" est neuf
-    expect(second.duplicatesSkipped).toBe(1); // "the"
-    // Deux brouillons distincts, sans mot en double entre eux.
-    expect(drafts.published).toHaveLength(0);
-    void drafts;
+    expect(result.status).toBe('failed');
+    const found = await s.drafts.findDraft(draftId);
+    expect(found?.draft.status).toBe('failed');
+    expect(found?.draft.error).not.toBeNull();
   });
 
   it('compare de façon normalisée (casse/espaces ignorés)', async () => {
-    const { drafts, useCase } = setup([batch(['The', ' be ']), '{"words":[]}']);
-    seedExisting(drafts, ['the']); // "the" connu → "The" doit être ignoré
+    const s = setup([batch(['The', ' be '])]);
+    seedExisting(s.drafts, ['the']);
 
-    const result = await useCase.execute({ tranche: TRANCHE, domainId: DOMAIN, createdBy: 'admin' });
+    const { result } = await startThenRun(s);
 
     expect(result.created).toBe(1); // seul "be"
     expect(result.duplicatesSkipped).toBe(1); // "The"

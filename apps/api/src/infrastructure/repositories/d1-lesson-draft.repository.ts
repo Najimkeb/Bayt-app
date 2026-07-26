@@ -25,6 +25,27 @@ export class D1LessonDraftRepository implements LessonDraftRepository {
     await this.db.batch([this.db.insert(lessonDrafts).values(draft), ...inserts]);
   }
 
+  public async completeDraft(
+    draftId: string,
+    cards: readonly DraftCardRecord[],
+    status: 'draft' | 'failed',
+    error: string | null,
+    now: number,
+  ): Promise<void> {
+    const inserts =
+      cards.length === 0
+        ? []
+        : chunkForInsert(cards, draftCards).map((rows) => this.db.insert(draftCards).values(rows));
+
+    await this.db.batch([
+      this.db
+        .update(lessonDrafts)
+        .set({ status, error, updatedAt: now })
+        .where(eq(lessonDrafts.id, draftId)),
+      ...inserts,
+    ]);
+  }
+
   public async listDrafts(): Promise<readonly DraftSummary[]> {
     const rows = await this.db
       .select({
@@ -34,6 +55,7 @@ export class D1LessonDraftRepository implements LessonDraftRepository {
         domainId: lessonDrafts.domainId,
         level: lessonDrafts.level,
         status: lessonDrafts.status,
+        error: lessonDrafts.error,
         createdAt: lessonDrafts.createdAt,
         updatedAt: lessonDrafts.updatedAt,
         cardCount: count(draftCards.id),

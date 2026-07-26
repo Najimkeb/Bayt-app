@@ -2,8 +2,11 @@ import { Scheduler } from '@bayt/domain';
 import { hashPassword } from 'better-auth/crypto';
 import { drizzle, type DrizzleD1Database } from 'drizzle-orm/d1';
 
-import type { IngestionMessage } from './application/ports/ingestion-queue.js';
+import type { QueueJob, VocabGenerationJob } from './application/ports/ingestion-queue.js';
 import { IngestDocument } from './application/use-cases/ingest-document.js';
+import { RunVocabularyGeneration } from './application/use-cases/generate-vocabulary.js';
+import { VocabularyGenerator } from './ingestion/vocab/vocabulary-generator.js';
+import { findTranche } from './ingestion/vocab/tranches.js';
 import { createAuth } from './auth/auth.js';
 import { createApp } from './http/app.js';
 import { BetterAuthSessionVerifier } from './http/session.js';
@@ -119,6 +122,34 @@ function createIngestor(db: DrizzleD1Database, env: Env): IngestDocument {
 }
 
 /**
+ * Traite un job de génération de vocabulaire (consumer Queue).
+ *
+ * Résout la tranche puis délègue à `RunVocabularyGeneration`, qui remplit le
+ * brouillon et le finalise (`draft`/`failed`) — jamais coincé en `generating`.
+ * Une tranche inconnue marque directement le brouillon `failed`.
+ */
+async function runVocabJob(db: DrizzleD1Database, env: Env, job: VocabGenerationJob): Promise<void> {
+  const drafts = new D1LessonDraftRepository(db);
+  const tranche = findTranche(job.tranche);
+  if (tranche === null) {
+    await drafts.completeDraft(job.draftId, [], 'failed', 'Tranche de fréquence inconnue.', Date.now());
+
+    return;
+  }
+
+  const run = new RunVocabularyGeneration(new VocabularyGenerator(createProvider(env)), drafts);
+  const result = await run.execute({
+    draftId: job.draftId,
+    tranche,
+    domainId: job.domainId,
+    ...(job.batchSize !== undefined ? { batchSize: job.batchSize } : {}),
+  });
+  console.log(
+    `[vocab] job ${job.draftId} → ${result.status} · ${String(result.created)} mot(s), ${String(result.duplicatesSkipped)} doublon(s), ${String(result.batches)} appel(s).`,
+  );
+}
+
+/**
  * Construit le cas d'usage du CRON de rappels, ou `null` si les clés VAPID
  * manquent (niveau 2 non configuré → on ne pousse rien, le niveau 1 reste actif).
  */
@@ -221,13 +252,23 @@ export default {
     return app.fetch(request, env, context);
   },
 
-  async queue(batch: MessageBatch<IngestionMessage>, env: Env): Promise<void> {
-    const ingest = createIngestor(drizzle(env.DB), env);
+  async queue(batch: MessageBatch<QueueJob>, env: Env): Promise<void> {
+    const db = drizzle(env.DB);
 
     for (const message of batch.messages) {
-      // IngestDocument fixe l'état final (ready/failed) ; on acquitte toujours.
-      await ingest.execute(message.body.documentId);
-      message.ack();
+      const job = message.body;
+      try {
+        if (job.kind === 'vocab') {
+          // RunVocabularyGeneration finalise le brouillon (draft/failed).
+          await runVocabJob(db, env, job);
+        } else {
+          // 'ingest' (ou message hérité sans `kind`) : ingestion de document.
+          // IngestDocument fixe l'état final (ready/failed).
+          await createIngestor(db, env).execute(job.documentId);
+        }
+      } finally {
+        message.ack();
+      }
     }
   },
 

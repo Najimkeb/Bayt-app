@@ -1,0 +1,1 @@
+ALTER TABLE `lesson_drafts` ADD `error` text;

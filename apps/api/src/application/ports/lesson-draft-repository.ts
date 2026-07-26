@@ -5,8 +5,12 @@ import type { LessonLevel } from '../../ingestion/sourced/search-provider.js';
 /** Statut de relecture d'une carte de brouillon. */
 export type DraftCardStatus = 'to_review' | 'validated';
 
-/** Statut d'un brouillon de leçon. */
-export type DraftStatus = 'draft' | 'published';
+/**
+ * Statut d'un brouillon de leçon.
+ * `generating` : génération asynchrone en cours (vocabulaire via Queue) ;
+ * `draft` : prêt à relire ; `published` : publié ; `failed` : échec (voir `error`).
+ */
+export type DraftStatus = 'generating' | 'draft' | 'published' | 'failed';
 
 /** Un brouillon de leçon sourcée. */
 export interface DraftRecord {
@@ -16,6 +20,8 @@ export interface DraftRecord {
   readonly domainId: string;
   readonly level: LessonLevel;
   readonly status: DraftStatus;
+  /** Motif d'échec (statut `failed`), sinon `null`. */
+  readonly error: string | null;
   readonly createdAt: number;
   readonly updatedAt: number;
 }
@@ -50,6 +56,20 @@ export interface DraftSummary extends DraftRecord {
 export interface LessonDraftRepository {
   /** Crée un brouillon et ses cartes (atomique). */
   createDraft(draft: DraftRecord, cards: readonly DraftCardRecord[]): Promise<void>;
+
+  /**
+   * Finalise un brouillon en cours de génération (asynchrone) : insère ses
+   * cartes et fixe son statut (`draft` si réussi, `failed` sinon), **atomique**.
+   * Le brouillon doit déjà exister (créé en `generating`). Ne laisse jamais un
+   * brouillon coincé en `generating`.
+   */
+  completeDraft(
+    draftId: string,
+    cards: readonly DraftCardRecord[],
+    status: 'draft' | 'failed',
+    error: string | null,
+    now: number,
+  ): Promise<void>;
 
   /** Brouillons, du plus récent au plus ancien. */
   listDrafts(): Promise<readonly DraftSummary[]>;

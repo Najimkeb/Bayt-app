@@ -73,7 +73,7 @@ export class SubmitDocument {
     const document: DocumentRecord = { ...base, status: 'pending', error: null, updatedAt: now };
     await this.documents.create(document);
     await this.storage.put(id, text);
-    await this.queue.send({ documentId: id });
+    await this.queue.send({ kind: 'ingest', documentId: id });
 
     return document;
   }

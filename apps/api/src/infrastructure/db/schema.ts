@@ -254,9 +254,16 @@ export const lessonDrafts = sqliteTable(
     topic: text('topic').notNull(),
     domainId: text('domain_id').notNull(),
     level: text('level', { enum: ['beginner', 'intermediate', 'advanced'] }).notNull(),
-    status: text('status', { enum: ['draft', 'published'] })
+    /**
+     * `generating` : génération asynchrone en cours (vocabulaire via Queue) ;
+     * `draft` : prêt à relire ; `published` : publié ; `failed` : génération
+     * échouée (motif dans `error`).
+     */
+    status: text('status', { enum: ['generating', 'draft', 'published', 'failed'] })
       .notNull()
       .default('draft'),
+    /** Motif d'échec de génération (statut `failed`), sinon `null`. */
+    error: text('error'),
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),
   },

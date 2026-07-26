@@ -62,6 +62,7 @@ export class GenerateSourcedLesson {
       domainId: input.domainId,
       level: input.level,
       status: 'draft',
+      error: null,
       createdAt: now,
       updatedAt: now,
     };

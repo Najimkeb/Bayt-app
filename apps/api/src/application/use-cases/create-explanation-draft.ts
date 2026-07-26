@@ -40,6 +40,7 @@ export class CreateExplanationDraft {
       domainId: input.domainId,
       level: 'beginner',
       status: 'draft',
+      error: null,
       createdAt: now,
       updatedAt: now,
     };

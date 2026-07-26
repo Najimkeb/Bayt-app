@@ -8,6 +8,7 @@ import type { SearchDocument } from '../../src/ingestion/sourced/search-provider
 import { FakeWebSearchProvider } from '../../src/ingestion/sourced/fake-search.provider.js';
 import { InMemoryIdentityRepository } from '../../src/infrastructure/repositories/in-memory-identity.repository.js';
 import { InMemoryLessonDraftRepository } from '../../src/infrastructure/repositories/in-memory-lesson-draft.repository.js';
+import { InMemoryIngestionQueue } from '../../src/infrastructure/queue/cf-ingestion-queue.js';
 import { InMemoryReviewRepository } from '../../src/infrastructure/repositories/in-memory-review.repository.js';
 import { authAs, bearerVerifier } from '../support/session.js';
 
@@ -115,37 +116,36 @@ describe('publication', () => {
   });
 });
 
-describe('génération de vocabulaire par fréquence', () => {
-  const VOCAB = JSON.stringify({
-    words: [
-      { word: 'the', translation: 'le/la', category: 'article', example: 'The cat.', exampleTranslation: 'Le chat.' },
-      { word: 'be', translation: 'être', category: 'verbe', example: 'To be here.', exampleTranslation: 'Être ici.' },
-    ],
-  });
+describe('génération de vocabulaire par fréquence (asynchrone)', () => {
+  let queue: InMemoryIngestionQueue;
 
   function buildVocab() {
     drafts = new InMemoryLessonDraftRepository();
+    queue = new InMemoryIngestionQueue();
 
     return createApp({
       repository: new InMemoryReviewRepository(),
       identityRepository: new InMemoryIdentityRepository([ADMIN, MEMBER]),
       lessonDraftRepository: drafts,
-      sourcedLlmProvider: llm(VOCAB),
+      ingestionQueue: queue,
       scheduler: new Scheduler(),
       sessionVerifier: bearerVerifier(),
       clock: () => NOW,
     });
   }
 
-  it('crée un brouillon de vocabulaire et renvoie le récap', async () => {
+  it('crée un brouillon « generating » et met le job en file (202)', async () => {
     const vocabApp = buildVocab();
     const res = await post(vocabApp, '/admin/lessons/vocabulary', { tranche: '1-100', domainId: 'dom_anglais', batchSize: 30 }, 'admin1');
 
-    expect(res.status).toBe(201);
-    const body = (await res.json()) as { draftId: string | null; created: number; batches: number };
-    expect(body.created).toBe(2); // "the" et "be" (uniques)
-    expect(body.batches).toBeGreaterThanOrEqual(1);
-    expect(body.draftId).not.toBeNull();
+    expect(res.status).toBe(202);
+    const body = (await res.json()) as { draftId: string; status: string };
+    expect(body.status).toBe('generating');
+    const found = await drafts.findDraft(body.draftId);
+    expect(found?.draft.status).toBe('generating');
+    expect(queue.sent).toEqual([
+      { kind: 'vocab', draftId: body.draftId, tranche: '1-100', domainId: 'dom_anglais', batchSize: 30 },
+    ]);
   });
 
   it('refuse une tranche inconnue (400)', async () => {

@@ -8,7 +8,7 @@ import { useId, useState, type FormEvent, type ReactElement } from 'react';
 
 import { OfflineNotice } from '@/components/offline/offline-notice';
 import { useDomains } from '@/lib/api/domain-queries';
-import type { LessonLevel } from '@/lib/api/draft-types';
+import type { DraftSummary, LessonLevel } from '@/lib/api/draft-types';
 import { useDrafts, useGenerateLesson } from '@/lib/api/studio-queries';
 import { useUserId } from '@/lib/auth/use-user-id';
 import { useSync } from '@/lib/offline/sync-provider';
@@ -23,6 +23,14 @@ const LEVEL_LABEL: Record<LessonLevel, string> = {
   beginner: 'Débutant',
   intermediate: 'Intermédiaire',
   advanced: 'Avancé',
+};
+
+/** Pastille de statut d'un brouillon (les 4 états). */
+const DRAFT_BADGE: Record<DraftSummary['status'], { label: string; className: string }> = {
+  generating: { label: 'génération…', className: 'bg-macaw/15 text-macaw' },
+  draft: { label: 'brouillon', className: 'bg-bee/20 text-[#8a6d00]' },
+  published: { label: 'publiée', className: 'bg-feather-green/15 text-feather-green' },
+  failed: { label: 'échec', className: 'bg-cardinal/15 text-cardinal' },
 };
 
 /**
@@ -160,14 +168,8 @@ export function StudioPanel(): ReactElement {
                     {draft.cardCount} carte{draft.cardCount > 1 ? 's' : ''} · {LEVEL_LABEL[draft.level]}
                   </span>
                 </div>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[0.7rem] font-black ${
-                    draft.status === 'published'
-                      ? 'bg-feather-green/15 text-feather-green'
-                      : 'bg-bee/20 text-[#8a6d00]'
-                  }`}
-                >
-                  {draft.status === 'published' ? 'publiée' : 'brouillon'}
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[0.7rem] font-black ${DRAFT_BADGE[draft.status].className}`}>
+                  {DRAFT_BADGE[draft.status].label}
                 </span>
               </Link>
             </li>
