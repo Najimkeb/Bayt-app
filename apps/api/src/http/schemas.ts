@@ -112,6 +112,26 @@ export const cardStatusBodySchema = z.object({
   status: z.enum(['to_review', 'validated']),
 });
 
+/** « Explique à BAYT » : sujet + explication libre (+ carte reliée éventuelle). */
+export const explainBodySchema = z.object({
+  topic: z.string().trim().min(3).max(200),
+  itemId: z.string().min(1).max(128).optional(),
+  explanation: z.string().trim().min(10).max(5000),
+});
+
+/** Historique d'explications, filtrable par carte. */
+export const explanationHistoryQuerySchema = z.object({
+  itemId: z.string().min(1).max(128).optional(),
+});
+
+/** Créer une carte (brouillon) à partir d'une explication (sujet libre). */
+export const explanationDraftBodySchema = z.object({
+  topic: z.string().trim().min(3).max(200),
+  reformulation: z.string().trim().min(1).max(1500),
+  explanation: z.string().trim().min(10).max(5000),
+  domainId: z.string().min(1).max(128).default('dom_apprendre'),
+});
+
 /** Événement porteur d'XP, discriminé par `type` (aligné sur `XpEvent`). */
 const xpEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('review'), grade: z.enum(REVIEW_GRADES) }),

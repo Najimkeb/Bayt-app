@@ -57,6 +57,8 @@ export function HomeScreen(): ReactElement {
 
       <ReviewCard />
 
+      <ExplainLink />
+
       <LibraryLink />
 
       {domains.isError ? (
@@ -100,6 +102,29 @@ function WelcomeMascot({
 }
 
 /** Accès à la bibliothèque : déposer un document pour générer des cartes. */
+/** Accès au mode « Explique à BAYT ». */
+function ExplainLink(): ReactElement {
+  return (
+    <Link
+      href="/explique"
+      className="rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+    >
+      <Surface className="flex items-center gap-4 p-5 transition-colors hover:bg-surface-hover">
+        <DomainIcon name="MessageCircle" color="orange" size="lg" />
+        <div className="flex min-w-0 flex-col">
+          <p className="text-lg font-extrabold">Explique à BAYT</p>
+          <p className="text-sm font-bold text-muted-foreground">
+            Explique-moi un concept — j&apos;évalue ta compréhension.
+          </p>
+        </div>
+        <span aria-hidden="true" className="ml-auto text-lg text-muted-foreground">
+          ›
+        </span>
+      </Surface>
+    </Link>
+  );
+}
+
 function LibraryLink(): ReactElement {
   return (
     <Link

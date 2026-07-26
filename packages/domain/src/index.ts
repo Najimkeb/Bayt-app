@@ -14,6 +14,7 @@ export * from './scheduling/index.js';
 export * from './exercises/index.js';
 export * from './gamification/index.js';
 export * from './catalog/index.js';
+export * from './explanation/index.js';
 
 /** Version du contrat de domaine, utile pour tracer les `ReviewLog` produits. */
 export const DOMAIN_VERSION = '0.1.0';

@@ -256,6 +256,16 @@ export function ReviewSession({ domainId }: { domainId?: string | undefined } = 
         )}
       </div>
 
+      {/* Approfondir : expliquer ce concept à BAYT (relié à la carte → FSRS). */}
+      {revealed && (
+        <a
+          href={`/explique?itemId=${encodeURIComponent(card.item.id)}&topic=${encodeURIComponent(card.item.front)}`}
+          className="text-center text-sm font-extrabold text-macaw underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Explique ce concept à BAYT
+        </a>
+      )}
+
       {/* Annonces pour les lecteurs d'écran, sans perturber l'affichage. */}
       <p aria-live="polite" className="sr-only">
         {feedback ??

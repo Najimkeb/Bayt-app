@@ -11,6 +11,7 @@ import type { AccessRepository } from '../application/ports/access-repository.js
 import type { AdminUserRepository } from '../application/ports/admin-user-repository.js';
 import type { DocumentRepository } from '../application/ports/document-repository.js';
 import type { DocumentStorage } from '../application/ports/document-storage.js';
+import type { ExplanationRepository } from '../application/ports/explanation-repository.js';
 import type { IdentityRepository } from '../application/ports/identity-repository.js';
 import type { IngestionQueue } from '../application/ports/ingestion-queue.js';
 import type { LessonRepository } from '../application/ports/lesson-repository.js';
@@ -24,8 +25,12 @@ import type { ProfileStatsRepository } from '../application/ports/profile-stats-
 import type { ProgressRepository } from '../application/ports/progress-repository.js';
 import type { ReviewRepository } from '../application/ports/review-repository.js';
 import { CompleteLesson } from '../application/use-cases/complete-lesson.js';
+import { CreateExplanationDraft } from '../application/use-cases/create-explanation-draft.js';
 import { CreateResetToken } from '../application/use-cases/create-reset-token.js';
 import { DeleteDocument } from '../application/use-cases/delete-document.js';
+import { EvaluateExplanation } from '../application/use-cases/evaluate-explanation.js';
+import { GetExplanationHistory } from '../application/use-cases/get-explanation-history.js';
+import { EvaluationError, ExplanationEvaluator } from '../tutoring/explanation-evaluator.js';
 import {
   GenerateSourcedLesson,
   NoSourcesError,
@@ -65,6 +70,9 @@ import {
   cardStatusBodySchema,
   dueQueueQuerySchema,
   editDraftCardBodySchema,
+  explainBodySchema,
+  explanationDraftBodySchema,
+  explanationHistoryQuerySchema,
   generateSourcedBodySchema,
   incrementProgressBodySchema,
   pathQuerySchema,
@@ -133,6 +141,12 @@ export interface AppDependencies {
   readonly webSearchProvider?: WebSearchProvider | null;
   readonly sourcedLlmProvider?: LLMProvider;
   /**
+   * Mode « Explique à BAYT ». Les routes `/explanations` ne sont montées que si
+   * `explanationRepository` **et** `evaluationLlmProvider` sont fournis.
+   */
+  readonly explanationRepository?: ExplanationRepository;
+  readonly evaluationLlmProvider?: LLMProvider;
+  /**
    * Pipeline d'ingestion. Les routes `/documents` ne sont montées que si les
    * trois dépendances (persistance, stockage, file) sont fournies.
    */
@@ -186,6 +200,8 @@ export function createApp({
   lessonDraftRepository,
   webSearchProvider,
   sourcedLlmProvider,
+  explanationRepository,
+  evaluationLlmProvider,
   documentRepository,
   documentStorage,
   ingestionQueue,
@@ -713,6 +729,89 @@ export function createApp({
         throw error;
       }
     });
+  }
+
+  // ── « Explique à BAYT » : la mascotte évalue une explication (→ FSRS) ────────
+  if (explanationRepository !== undefined && evaluationLlmProvider !== undefined) {
+    const evaluateExplanation = new EvaluateExplanation(
+      new ExplanationEvaluator(evaluationLlmProvider),
+      explanationRepository,
+      submitReview,
+      clock,
+    );
+    const getHistory = new GetExplanationHistory(explanationRepository);
+
+    /** BAYT évalue une explication ; note FSRS si reliée à une carte. */
+    app.post('/explanations', async (context) => {
+      const body = explainBodySchema.safeParse(await readJson(context.req.raw));
+      if (!body.success) {
+        return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
+      }
+
+      try {
+        const result = await evaluateExplanation.execute({
+          userId: context.get('userId'),
+          topic: body.data.topic,
+          itemId: body.data.itemId ?? null,
+          explanation: body.data.explanation,
+        });
+
+        return context.json(
+          {
+            evaluation: result.evaluation,
+            grade: result.grade,
+            review:
+              result.review === null
+                ? null
+                : {
+                    intervalMs:
+                      result.review.state.due.getTime() - result.review.log.reviewedAt.getTime(),
+                  },
+          },
+          201,
+        );
+      } catch (error) {
+        if (error instanceof EvaluationError) {
+          return context.json({ error: 'evaluation_failed' }, 502);
+        }
+
+        throw error;
+      }
+    });
+
+    /** Historique des explications de l'apprenant (progression sur un concept). */
+    app.get('/explanations', async (context) => {
+      const query = explanationHistoryQuerySchema.safeParse({ itemId: context.req.query('itemId') });
+      if (!query.success) {
+        return context.json({ error: 'invalid_request', details: query.error.issues }, 400);
+      }
+
+      const history = await getHistory.execute(context.get('userId'), query.data.itemId);
+
+      return context.json({ history });
+    });
+
+    /** Sujet libre : crée une carte (brouillon) à partir de l'explication. */
+    if (lessonDraftRepository !== undefined) {
+      const createDraft = new CreateExplanationDraft(lessonDraftRepository, clock);
+
+      app.post('/explanations/draft', async (context) => {
+        const body = explanationDraftBodySchema.safeParse(await readJson(context.req.raw));
+        if (!body.success) {
+          return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
+        }
+
+        const draftId = await createDraft.execute({
+          userId: context.get('userId'),
+          topic: body.data.topic,
+          reformulation: body.data.reformulation,
+          explanation: body.data.explanation,
+          domainId: body.data.domainId,
+        });
+
+        return context.json({ draftId }, 201);
+      });
+    }
   }
 
   if (pathRepository !== undefined) {

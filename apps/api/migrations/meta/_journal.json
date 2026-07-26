@@ -78,6 +78,13 @@
       "when": 1785159079530,
       "tag": "0010_sourced_lesson_drafts",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1785245479530,
+      "tag": "0011_explanation_logs",
+      "breakpoints": true
     }
   ]
 }

@@ -16,6 +16,7 @@ import { D1AccessRepository } from './infrastructure/repositories/d1-access.repo
 import { D1AdminUserRepository } from './infrastructure/repositories/d1-admin-user.repository.js';
 import { createWebSearchProvider } from './ingestion/sourced/ai-gateway-search.provider.js';
 import { D1DocumentRepository } from './infrastructure/repositories/d1-document.repository.js';
+import { D1ExplanationRepository } from './infrastructure/repositories/d1-explanation.repository.js';
 import { D1IdentityRepository } from './infrastructure/repositories/d1-identity.repository.js';
 import { D1LessonRepository } from './infrastructure/repositories/d1-lesson.repository.js';
 import { D1LessonDraftRepository } from './infrastructure/repositories/d1-lesson-draft.repository.js';
@@ -153,6 +154,9 @@ export default {
       }),
       // Agent de génération + audit : même provider LLM que l'ingestion.
       sourcedLlmProvider: createProvider(env),
+      // Mode « Explique à BAYT » : historique + évaluateur (même provider LLM).
+      explanationRepository: new D1ExplanationRepository(db),
+      evaluationLlmProvider: createProvider(env),
       documentRepository: new D1DocumentRepository(db),
       documentStorage: new D1DocumentStorage(db),
       ingestionQueue: new CfIngestionQueue(env.INGESTION_QUEUE),

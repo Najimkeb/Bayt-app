@@ -285,6 +285,37 @@ export const draftCards = sqliteTable(
 );
 
 /**
+ * Historique du mode « Explique à BAYT » (contexte « AI Tutoring »).
+ *
+ * L'apprenant explique un concept ; BAYT évalue et note. On garde une trace
+ * (sujet, score, verdict, note FSRS appliquée) pour visualiser la progression
+ * sur un concept dans le temps. `item_id` relie l'explication à une carte
+ * existante (`null` = sujet libre).
+ */
+export const explanationLogs = sqliteTable(
+  'explanation_logs',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    /** Carte reliée (`learning_items.id`), ou `null` pour un sujet libre. */
+    itemId: text('item_id'),
+    topic: text('topic').notNull(),
+    /** Score de compréhension, 0 à 100. */
+    score: integer('score').notNull(),
+    verdict: text('verdict', {
+      enum: ['correct', 'incomplete', 'imprecise', 'erroneous'],
+    }).notNull(),
+    /** Note FSRS appliquée si reliée à une carte (`null` sinon). */
+    grade: text('grade'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => [
+    index('explanation_logs_user_created_idx').on(table.userId, table.createdAt),
+    index('explanation_logs_item_idx').on(table.itemId),
+  ],
+);
+
+/**
  * Documents ingérés (contexte « Knowledge Ingestion ») : métadonnées et statut
  * de traitement. Le **texte extrait** est stocké ici (`extracted_text`), en
  * attendant l'activation de R2 (cf. lessons.md L031) ; les cartes générées

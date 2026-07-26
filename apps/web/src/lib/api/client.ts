@@ -1,6 +1,7 @@
 import type { AdminUser, AllowedEmail, ResetLink } from './admin-types';
 import type { DomainList } from './domain-types';
 import type { DraftCardStatus, DraftDetail, DraftSummary, LessonLevel } from './draft-types';
+import type { EvaluationResult, ExplanationHistoryEntry } from './explanation-types';
 import type { DocumentCards, DocumentDto, DocumentList } from './document-types';
 import type { AnswerResult, ExerciseAnswer, Lesson } from './lesson-types';
 import type { LearningPath } from './path-types';
@@ -235,6 +236,42 @@ export function publishDraft(draftId: string): Promise<{ published: number }> {
     `/admin/lessons/drafts/${encodeURIComponent(draftId)}/publish`,
     { method: 'POST', body: JSON.stringify({}) },
   );
+}
+
+// ── « Explique à BAYT » ──────────────────────────────────────────────────────
+
+/** Soumet une explication ; BAYT l'évalue (et note FSRS si reliée à une carte). */
+export function evaluateExplanation(input: {
+  topic: string;
+  itemId?: string;
+  explanation: string;
+}): Promise<EvaluationResult> {
+  return request<EvaluationResult>('/explanations', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+/** Historique des explications (progression sur un concept). */
+export function fetchExplanationHistory(itemId?: string): Promise<{
+  history: ExplanationHistoryEntry[];
+}> {
+  const query = itemId !== undefined ? `?itemId=${encodeURIComponent(itemId)}` : '';
+
+  return request<{ history: ExplanationHistoryEntry[] }>(`/explanations${query}`);
+}
+
+/** Crée une carte (brouillon) à partir d'une explication (sujet libre). */
+export function createExplanationDraft(input: {
+  topic: string;
+  reformulation: string;
+  explanation: string;
+  domainId?: string;
+}): Promise<{ draftId: string }> {
+  return request<{ draftId: string }>('/explanations/draft', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 /**
