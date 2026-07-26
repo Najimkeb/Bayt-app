@@ -1,4 +1,4 @@
-import { asc, count, desc, eq } from 'drizzle-orm';
+import { and, asc, count, desc, eq } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 
 import type {
@@ -87,13 +87,21 @@ export class D1LessonDraftRepository implements LessonDraftRepository {
     await this.db.insert(draftCards).values(card);
   }
 
-  public async existingFronts(domainId: string): Promise<readonly string[]> {
-    const rows = await this.db
+  public async knownFronts(domainId: string): Promise<readonly string[]> {
+    // Mots déjà publiés dans le domaine.
+    const published = await this.db
       .select({ front: learningItems.front })
       .from(learningItems)
       .where(eq(learningItems.domainId, domainId));
 
-    return rows.map((r) => r.front);
+    // Mots encore en brouillon (non publié) du même domaine → dédup additive.
+    const drafted = await this.db
+      .select({ front: draftCards.front })
+      .from(draftCards)
+      .innerJoin(lessonDrafts, eq(draftCards.draftId, lessonDrafts.id))
+      .where(and(eq(lessonDrafts.domainId, domainId), eq(lessonDrafts.status, 'draft')));
+
+    return [...published.map((r) => r.front), ...drafted.map((r) => r.front)];
   }
 
   public async publish(

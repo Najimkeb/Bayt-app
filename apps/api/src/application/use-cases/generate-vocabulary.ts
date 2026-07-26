@@ -1,11 +1,8 @@
 import { normalizeText } from '@bayt/domain';
 
-import type {
-  VocabularyGenerator,
-} from '../../ingestion/vocab/vocabulary-generator.js';
+import type { VocabularyGenerator } from '../../ingestion/vocab/vocabulary-generator.js';
 import type { VocabWord } from '../../ingestion/vocab/vocab-schema.js';
 import type { FrequencyTranche } from '../../ingestion/vocab/tranches.js';
-import { trancheSize } from '../../ingestion/vocab/tranches.js';
 import type {
   DraftCardRecord,
   DraftRecord,
@@ -18,7 +15,7 @@ export interface GenerateVocabularyInput {
   readonly domainId: string;
   /** Admin auteur (id de session). */
   readonly createdBy: string;
-  /** Mots par appel LLM (paquet raisonnable). Défaut 30. */
+  /** Nouveaux mots visés par génération (un « paquet » relisable). Défaut 30. */
   readonly batchSize?: number | undefined;
 }
 
@@ -26,7 +23,7 @@ export interface GenerateVocabularyInput {
 export interface GenerateVocabularyResult {
   /** Brouillon créé (`null` si 0 nouveau mot → rien à relire). */
   readonly draftId: string | null;
-  /** Mots visés par la tranche. */
+  /** Nouveaux mots visés par cette génération (le paquet). */
   readonly requested: number;
   /** Nouveaux mots réellement ajoutés au brouillon. */
   readonly created: number;
@@ -36,18 +33,31 @@ export interface GenerateVocabularyResult {
   readonly batches: number;
 }
 
-/** Plafond dur du nombre d'appels LLM par génération (garde-fou quota). */
-const MAX_BATCHES = 8;
+/**
+ * Nombre MAX d'appels LLM PAR requête HTTP.
+ *
+ * Garde-fou double : (1) une requête ne doit jamais enchaîner assez d'appels
+ * pour dépasser le délai de la passerelle (une génération géante synchrone
+ * expirait et ne persistait RIEN — quota gaspillé) ; (2) économie de quota.
+ * Une génération produit donc **un paquet relisable** (~`batchSize` mots) ; on
+ * relance pour la suite de la tranche (dédup additive → jamais de doublon).
+ */
+const MAX_CALLS_PER_REQUEST = 3;
+
+/** Plafond de mots « connus » injectés dans le prompt (anti-bloat). */
+const MAX_EXCLUDE_IN_PROMPT = 120;
 
 /**
- * Cas d'usage « générer une liste de vocabulaire par tranche de fréquence ».
+ * Cas d'usage « générer un paquet de vocabulaire d'une tranche de fréquence ».
  *
- * Génère par **paquets** (un appel LLM = un paquet) et enchaîne jusqu'à couvrir
- * la tranche, **jamais en boucle infinie** (plafond `MAX_BATCHES`). Chaque mot
- * est **dédupliqué** (comparaison normalisée) contre les mots déjà présents dans
- * le domaine ET contre les mots déjà proposés dans cette génération. Le résultat
- * est un **brouillon** : rien n'entre en mémoire sans relecture (comme le studio
- * sourcé).
+ * Produit **un paquet** de ~`batchSize` mots NEUFS (jamais un appel géant) :
+ * quelques appels LLM au plus, bornés par `MAX_CALLS_PER_REQUEST`. Chaque mot
+ * est **dédupliqué** (comparaison normalisée) contre les mots déjà connus du
+ * domaine (publiés ET en brouillon) et contre les mots déjà proposés dans cette
+ * génération. Les mots connus sont aussi **exclus dans le prompt** pour que le
+ * modèle enchaîne sur les mots SUIVANTS : relancer couvre la tranche par paquets,
+ * sans doublon et sans boucle automatique. Le résultat est un **brouillon** :
+ * rien n'entre en mémoire sans relecture.
  */
 export class GenerateVocabulary {
   public constructor(
@@ -58,26 +68,24 @@ export class GenerateVocabulary {
   ) {}
 
   public async execute(input: GenerateVocabularyInput): Promise<GenerateVocabularyResult> {
-    const target = trancheSize(input.tranche);
-    const batchSize = clampBatchSize(input.batchSize);
+    const target = clampBatchSize(input.batchSize);
 
-    // Base anti-doublon : les mots déjà présents dans le domaine (normalisés).
-    const existing = new Set(
-      (await this.drafts.existingFronts(input.domainId)).map(normalizeText),
-    );
+    // Mots déjà connus du domaine (publiés + brouillons) : base de dédup ET
+    // liste d'exclusion envoyée au modèle pour qu'il donne les mots suivants.
+    const knownRaw = await this.drafts.knownFronts(input.domainId);
+    const known = new Set(knownRaw.map(normalizeText));
 
     const collected: VocabWord[] = [];
     const seen = new Set<string>(); // mots retenus dans CETTE génération
     let duplicatesSkipped = 0;
     let batches = 0;
 
-    // Enchaîne des paquets jusqu'à couvrir la tranche, sous le plafond d'appels.
-    while (collected.length < target && batches < MAX_BATCHES) {
+    while (collected.length < target && batches < MAX_CALLS_PER_REQUEST) {
       const remaining = target - collected.length;
-      const count = Math.min(batchSize, remaining);
-      const exclude = collected.map((w) => w.word);
+      // Exclut du prompt les mots connus (échantillon borné) + ceux déjà obtenus.
+      const exclude = [...knownRaw.slice(-MAX_EXCLUDE_IN_PROMPT), ...collected.map((w) => w.word)];
 
-      const words = await this.generator.generateBatch(input.tranche, count, exclude);
+      const words = await this.generator.generateBatch(input.tranche, remaining, exclude);
       batches += 1;
 
       let addedThisBatch = 0;
@@ -86,7 +94,7 @@ export class GenerateVocabulary {
         if (key === '') {
           continue;
         }
-        if (existing.has(key) || seen.has(key)) {
+        if (known.has(key) || seen.has(key)) {
           duplicatesSkipped += 1;
           continue;
         }
@@ -98,8 +106,8 @@ export class GenerateVocabulary {
         }
       }
 
-      // Sécurité anti-boucle : un paquet qui n'apporte plus AUCUN mot neuf
-      // (le modèle tourne en rond) arrête la génération proprement.
+      // Un paquet qui n'apporte plus AUCUN mot neuf = tranche épuisée (le modèle
+      // tourne en rond) → on s'arrête proprement.
       if (addedThisBatch === 0) {
         break;
       }
@@ -111,13 +119,7 @@ export class GenerateVocabulary {
 
     const draftId = await this.persist(input, collected);
 
-    return {
-      draftId,
-      requested: target,
-      created: collected.length,
-      duplicatesSkipped,
-      batches,
-    };
+    return { draftId, requested: target, created: collected.length, duplicatesSkipped, batches };
   }
 
   /** Crée le brouillon (cartes riches) via le circuit de relecture existant. */

@@ -76,8 +76,12 @@ export interface LessonDraftRepository {
   publish(draftId: string, items: readonly LearningItemRecord[], now: number): Promise<void>;
 
   /**
-   * Rectos (`front`) des `learning_items` déjà **publiés** dans un domaine.
-   * Base de la déduplication du vocabulaire : on n'ajoute pas un mot déjà connu.
+   * Rectos (`front`) déjà **connus** dans un domaine : les `learning_items`
+   * publiés **et** les cartes des brouillons encore ouverts de ce domaine.
+   *
+   * Base de la déduplication du vocabulaire : on n'ajoute pas un mot déjà connu,
+   * même s'il n'est encore qu'en brouillon — les générations successives sont
+   * ainsi **additives** (chaque relance donne les mots suivants).
    */
-  existingFronts(domainId: string): Promise<readonly string[]>;
+  knownFronts(domainId: string): Promise<readonly string[]>;
 }

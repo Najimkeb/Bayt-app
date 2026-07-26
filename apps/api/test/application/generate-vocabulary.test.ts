@@ -124,6 +124,27 @@ describe('GenerateVocabulary', () => {
     expect(drafts.published).toHaveLength(0);
   });
 
+  it('est additive : ignore les mots déjà présents dans un brouillon ouvert', async () => {
+    // 1re génération crée un brouillon avec "the","be". 2e génération (relance)
+    // doit ignorer ces mots-là même s'ils ne sont pas encore publiés.
+    const { drafts, useCase } = setup([
+      batch(['the', 'be']),
+      '{"words":[]}',
+      batch(['the', 'to']), // relance : "the" déjà en brouillon → ignoré
+      '{"words":[]}',
+    ]);
+
+    const first = await useCase.execute({ tranche: TRANCHE, domainId: DOMAIN, createdBy: 'admin' });
+    expect(first.created).toBe(2);
+
+    const second = await useCase.execute({ tranche: TRANCHE, domainId: DOMAIN, createdBy: 'admin' });
+    expect(second.created).toBe(1); // seul "to" est neuf
+    expect(second.duplicatesSkipped).toBe(1); // "the"
+    // Deux brouillons distincts, sans mot en double entre eux.
+    expect(drafts.published).toHaveLength(0);
+    void drafts;
+  });
+
   it('compare de façon normalisée (casse/espaces ignorés)', async () => {
     const { drafts, useCase } = setup([batch(['The', ' be ']), '{"words":[]}']);
     seedExisting(drafts, ['the']); // "the" connu → "The" doit être ignoré

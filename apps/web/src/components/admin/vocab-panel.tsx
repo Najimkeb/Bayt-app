@@ -18,9 +18,8 @@ const TRANCHES: readonly { id: VocabTranche; label: string; start: number; end: 
   { id: '600-1000', label: 'Mots 600 à 1000', start: 600, end: 1000 },
 ];
 
-/** Paquet par appel (miroir du défaut serveur) + plafond d'appels. */
+/** Mots neufs par génération (paquet relisable, miroir du défaut serveur). */
 const BATCH_SIZE = 30;
-const MAX_BATCHES = 8;
 
 /** Domaine anglais par défaut du catalogue. */
 const DEFAULT_DOMAIN = 'dom_anglais';
@@ -50,13 +49,10 @@ export function VocabPanel(): ReactElement {
 
   const tranche = TRANCHES.find((t) => t.id === trancheId) ?? TRANCHES[0]!;
 
-  // Estimation avant génération (mots visés + nombre d'appels IA plafonné).
-  const estimate = useMemo(() => {
-    const words = tranche.end - tranche.start + 1;
-    const calls = Math.min(Math.ceil(words / BATCH_SIZE), MAX_BATCHES);
-
-    return { words, calls };
-  }, [tranche]);
+  // Estimation : chaque génération produit UN paquet relisable ; on relance pour
+  // couvrir la tranche (dédup additive → jamais de doublon). Mots totaux visés
+  // par la tranche, à titre indicatif.
+  const trancheWords = useMemo(() => tranche.end - tranche.start + 1, [tranche]);
 
   function onSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -130,9 +126,9 @@ export function VocabPanel(): ReactElement {
 
       {/* Estimation avant génération (économie de quota). */}
       <p className="rounded-[var(--radius-button)] bg-surface-hover/60 px-3 py-2 text-xs font-bold text-muted-foreground">
-        Estimation : ≈ {estimate.words} mots visés · ~{estimate.calls} appel
-        {estimate.calls > 1 ? 's' : ''} IA (paquets de {BATCH_SIZE}). Les mots déjà connus seront
-        ignorés.
+        Estimation : ~{BATCH_SIZE} mots par génération (1 à 3 appels IA). Cette tranche compte ≈
+        {trancheWords} mots au total — relance pour la couvrir, sans doublon (les mots déjà connus
+        sont ignorés).
       </p>
 
       {error !== null && (
@@ -171,12 +167,17 @@ function Recap({ recap }: { recap: VocabularyResult }): ReactElement {
         {` · ${String(recap.batches)} appel${recap.batches > 1 ? 's' : ''} IA`}
       </p>
       {recap.draftId !== null ? (
-        <Link
-          href={`/admin/lessons/${recap.draftId}`}
-          className="w-fit text-sm font-extrabold text-macaw underline underline-offset-2"
-        >
-          Relire et valider le brouillon →
-        </Link>
+        <>
+          <Link
+            href={`/admin/lessons/${recap.draftId}`}
+            className="w-fit text-sm font-extrabold text-macaw underline underline-offset-2"
+          >
+            Relire et valider le brouillon →
+          </Link>
+          <p className="text-xs font-bold text-muted-foreground">
+            Relance pour les mots suivants de la tranche (les mots de ce brouillon seront ignorés).
+          </p>
+        </>
       ) : (
         <p className="text-xs font-bold text-muted-foreground">
           Aucun nouveau mot : cette tranche est déjà couverte dans ce domaine.

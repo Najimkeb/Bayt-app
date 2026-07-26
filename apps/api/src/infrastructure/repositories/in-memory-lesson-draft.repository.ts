@@ -88,9 +88,21 @@ export class InMemoryLessonDraftRepository implements LessonDraftRepository {
     return Promise.resolve();
   }
 
-  public existingFronts(domainId: string): Promise<readonly string[]> {
-    return Promise.resolve(
-      this.published.filter((item) => item.domainId === domainId).map((item) => item.front),
+  public knownFronts(domainId: string): Promise<readonly string[]> {
+    const published = this.published
+      .filter((item) => item.domainId === domainId)
+      .map((item) => item.front);
+
+    // Fronts des cartes des brouillons encore ouverts de ce domaine.
+    const openDraftIds = new Set(
+      [...this.#drafts.values()]
+        .filter((d) => d.domainId === domainId && d.status === 'draft')
+        .map((d) => d.id),
     );
+    const drafted = [...this.#cards.values()]
+      .filter((c) => openDraftIds.has(c.draftId))
+      .map((c) => c.front);
+
+    return Promise.resolve([...published, ...drafted]);
   }
 }
