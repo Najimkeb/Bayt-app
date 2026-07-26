@@ -120,7 +120,7 @@ export function ResetPasswordForm(): ReactElement {
           </p>
         )}
 
-        <Button type="submit" variant="green" size="lg" disabled={pending} className="mt-1 w-full">
+        <Button type="submit" variant="brand" size="lg" disabled={pending} className="mt-1 w-full">
           {pending ? 'Un instant…' : 'Enregistrer'}
         </Button>
       </form>

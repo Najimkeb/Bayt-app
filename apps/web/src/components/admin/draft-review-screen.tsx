@@ -95,7 +95,7 @@ export function DraftReviewScreen({ draftId }: { draftId: string }): ReactElemen
           </div>
         ) : (
           <Button
-            variant="green"
+            variant="brand"
             size="lg"
             disabled={isPublished || validated === 0 || publish.isPending}
             onClick={() => publish.mutate(undefined, { onSuccess: (r) => setPublished(r.published) })}

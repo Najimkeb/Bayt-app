@@ -42,7 +42,7 @@ export function LessonComplete({
 
       <XpReward data={reward} />
 
-      <Link href="/review" className={buttonVariants({ variant: 'green', size: 'lg' })}>
+      <Link href="/review" className={buttonVariants({ variant: 'brand', size: 'lg' })}>
         Réviser mes cartes
       </Link>
     </motion.div>

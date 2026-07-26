@@ -7,7 +7,7 @@ import { useEffect, type ReactElement, type ReactNode } from 'react';
 import { useSession } from '@/lib/auth/client';
 
 /** Routes accessibles sans session. */
-const PUBLIC_ROUTES = new Set(['/login', '/signup', '/reset-password']);
+const PUBLIC_ROUTES = new Set(['/login', '/signup', '/reset-password', '/forgot-password']);
 
 /** Routes réservées aux visiteurs : un connecté y est renvoyé à l'accueil. */
 const GUEST_ONLY_ROUTES = new Set(['/login', '/signup']);

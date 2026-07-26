@@ -128,7 +128,7 @@ export function StudioPanel(): ReactElement {
           </p>
         )}
 
-        <Button type="submit" variant="green" size="md" disabled={generate.isPending} className="self-start">
+        <Button type="submit" variant="brand" size="md" disabled={generate.isPending} className="self-start">
           <Sparkles aria-hidden="true" className="size-4" />
           {generate.isPending ? 'Recherche et rédaction…' : 'Générer une leçon sourcée'}
         </Button>

@@ -92,7 +92,7 @@ export function AccessPanel({
           </p>
         )}
 
-        <Button type="submit" variant="green" size="md" disabled={add.isPending} className="self-start">
+        <Button type="submit" variant="brand" size="md" disabled={add.isPending} className="self-start">
           <UserPlus aria-hidden="true" className="size-4" />
           {add.isPending ? 'Ajout…' : 'Autoriser'}
         </Button>

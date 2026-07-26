@@ -48,6 +48,12 @@ export function AuthForm({ mode }: { mode: Mode }): ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
+  // Bouton actif seulement quand les champs requis sont remplis.
+  const canSubmit =
+    email.trim() !== '' &&
+    password !== '' &&
+    (mode === 'login' || name.trim() !== '');
+
   async function onSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setError(null);
@@ -128,10 +134,25 @@ export function AuthForm({ mode }: { mode: Mode }): ReactElement {
           </p>
         )}
 
-        <Button type="submit" variant="green" size="lg" disabled={pending} className="mt-1 w-full">
+        <Button
+          type="submit"
+          variant="brand"
+          size="lg"
+          disabled={pending || !canSubmit}
+          className="mt-1 w-full"
+        >
           {pending ? 'Un instant…' : copy.cta}
         </Button>
       </form>
+
+      {mode === 'login' && (
+        <Link
+          href="/forgot-password"
+          className="text-sm font-bold text-muted-foreground underline underline-offset-2 hover:text-foreground"
+        >
+          Mot de passe oublié ?
+        </Link>
+      )}
 
       <p className="text-sm font-bold text-muted-foreground">
         {copy.alt}{' '}

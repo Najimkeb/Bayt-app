@@ -23,7 +23,8 @@ function isHidden(pathname: string): boolean {
     pathname.startsWith('/admin/lessons/') ||
     pathname === '/login' ||
     pathname === '/signup' ||
-    pathname === '/reset-password'
+    pathname === '/reset-password' ||
+    pathname === '/forgot-password'
   );
 }
 
@@ -57,7 +58,7 @@ export function BottomNav(): ReactElement | null {
                 href={tab.href}
                 aria-current={active ? 'page' : undefined}
                 className={`flex flex-col items-center gap-0.5 py-2 text-[0.7rem] font-extrabold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${
-                  active ? 'text-feather-green' : 'text-muted-foreground'
+                  active ? 'text-fox-orange' : 'text-muted-foreground'
                 }`}
               >
                 <Icon aria-hidden="true" className="size-6" strokeWidth={active ? 2.6 : 2} />

@@ -25,6 +25,10 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // `brand` = action principale (orange renard). Le vert reste sémantique
+        // (bonne réponse), il n'est donc plus une variante de bouton d'action.
+        brand:
+          '[--btn-bg:var(--color-primary)] [--btn-shadow:var(--color-primary-shadow)] [--btn-fg:var(--color-primary-foreground)]',
         green: '[--btn-bg:var(--color-feather-green)] [--btn-shadow:var(--color-feather-green-shadow)] [--btn-fg:#fff]',
         red: '[--btn-bg:var(--color-cardinal)] [--btn-shadow:var(--color-cardinal-shadow)] [--btn-fg:#fff]',
         blue: '[--btn-bg:var(--color-macaw)] [--btn-shadow:var(--color-macaw-shadow)] [--btn-fg:#fff]',
@@ -38,7 +42,7 @@ export const buttonVariants = cva(
       },
     },
     defaultVariants: {
-      variant: 'green',
+      variant: 'brand',
       size: 'md',
     },
   },

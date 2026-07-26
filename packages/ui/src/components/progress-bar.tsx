@@ -20,7 +20,8 @@ export interface ProgressBarProps {
 }
 
 const FILL_COLOR = {
-  green: 'var(--color-feather-green)',
+  // Remplissage par défaut = orange de marque (progression XP/leçon).
+  green: 'var(--color-fox-orange)',
   blue: 'var(--color-macaw)',
   yellow: 'var(--color-bee)',
 } as const;

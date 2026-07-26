@@ -1,6 +1,15 @@
 @import 'tailwindcss';
 
 /*
+ * `@bayt/ui` vit hors de l'arbre scanné par défaut (résolu via node_modules) :
+ * sans cette déclaration, Tailwind ne génère PAS les classes de ses composants
+ * partagés — notamment les variantes de bouton pressable
+ * (`[--btn-bg:var(--color-feather-green)]`…). Résultat : `--btn-bg` reste vide
+ * et le bouton devient invisible (fond transparent). On déclare donc la source.
+ */
+@source "../../../../packages/ui/src";
+
+/*
  * Direction artistique BAYT — inspiration Duolingo.
  *
  * Ludique, "chunky", colore : gros boutons a liseré 3D, coins bien arrondis,
@@ -24,6 +33,16 @@
   --color-bee: #ffc800;
   --color-bee-shadow: #e6a800;
 
+  /*
+   * Accent de MARQUE = orange renard. Remplace le vert comme couleur d'action
+   * principale (le vert reste réservé au sémantique : bonne réponse, succès).
+   * `#d24500` : texte blanc lisible (contraste 4.58:1 → WCAG AA) sur le bouton,
+   * en clair comme en sombre. `--color-fox-orange` sert aussi de texte d'accent
+   * sur les surfaces ; il est éclairci en Dark Mode (cf. `.dark`) pour rester AA.
+   */
+  --color-fox-orange: #d24500;
+  --color-fox-orange-shadow: #a83700;
+
   /* Neutres. */
   --color-background: #ffffff;
   --color-surface: #ffffff;
@@ -33,10 +52,10 @@
   --color-border: #e5e5e5;
   --color-border-strong: #d4d4d4;
 
-  /* Accent produit = vert Duolingo. */
-  --color-primary: #58cc02;
-  --color-primary-hover: #61e002;
-  --color-primary-shadow: #58a700;
+  /* Accent produit = orange renard (marque). Texte blanc AA (4.58:1). */
+  --color-primary: #d24500;
+  --color-primary-hover: #e24d00;
+  --color-primary-shadow: #a83700;
   --color-primary-foreground: #ffffff;
   --color-ring: #1cb0f6;
 
@@ -57,10 +76,13 @@
   --color-border: #37464f;
   --color-border-strong: #4a5c66;
 
-  --color-primary: #58cc02;
-  --color-primary-hover: #61e002;
-  --color-primary-shadow: #4a9e02;
-  --color-primary-foreground: #131f24;
+  /* Marque orange : bouton/nœuds gardent l'orange foncé (texte/icône blancs AA) ;
+     l'accent TEXTE sur surface sombre est éclairci pour rester lisible. */
+  --color-fox-orange: #ff8c42;
+  --color-primary: #d24500;
+  --color-primary-hover: #e24d00;
+  --color-primary-shadow: #a83700;
+  --color-primary-foreground: #ffffff;
   --color-ring: #1cb0f6;
 }
 

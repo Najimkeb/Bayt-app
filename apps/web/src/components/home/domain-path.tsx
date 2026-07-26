@@ -62,7 +62,7 @@ function DomainHeader({ domain }: { domain: DomainOverview }): ReactElement {
         <Link
           href={`/review?domain=${encodeURIComponent(domain.id)}`}
           aria-label={`Réviser ${String(domain.cardsDue)} carte(s) du domaine ${domain.name}`}
-          className={buttonVariants({ variant: 'green', size: 'md' })}
+          className={buttonVariants({ variant: 'brand', size: 'md' })}
         >
           Réviser ({domain.cardsDue})
         </Link>

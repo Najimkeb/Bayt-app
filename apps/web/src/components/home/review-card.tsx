@@ -52,7 +52,7 @@ export function ReviewCard(): ReactElement {
       <Link
         href="/review"
         aria-label={`Réviser ${String(count)} carte${count > 1 ? 's' : ''}`}
-        className={buttonVariants({ variant: 'green', size: 'lg' })}
+        className={buttonVariants({ variant: 'brand', size: 'lg' })}
       >
         Réviser
       </Link>

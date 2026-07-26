@@ -42,7 +42,7 @@ export function UnitPath({ unit, color }: { unit: PathUnit; color: string }): Re
         <ol className="relative flex flex-col items-center gap-7">
           {unit.lessons.map((node, index) => (
             <li key={node.id} style={{ transform: `translateX(${String(offsetFor(index))}px)` }}>
-              <LessonNode node={node} color={color} />
+              <LessonNode node={node} />
             </li>
           ))}
         </ol>

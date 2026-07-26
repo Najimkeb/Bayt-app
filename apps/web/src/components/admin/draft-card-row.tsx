@@ -157,7 +157,7 @@ export function AddCard({ draftId, onDone }: { draftId: string; onDone: () => vo
       )}
       <div className="flex gap-2">
         <Button
-          variant="green"
+          variant="brand"
           size="sm"
           disabled={add.isPending}
           onClick={() =>

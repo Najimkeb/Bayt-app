@@ -5,7 +5,6 @@ import Link from 'next/link';
 import type { CSSProperties, ReactElement } from 'react';
 
 import type { LessonNodeState, PathLessonNode } from '@/lib/api/path-types';
-import { paletteFor } from '@/lib/domain-colors';
 
 /**
  * Un nœud du chemin : leçon terminée (coche), disponible (pulsation + badge
@@ -13,16 +12,14 @@ import { paletteFor } from '@/lib/domain-colors';
  *
  * Terminée / disponible = lien vers /lesson/[id]. Verrouillée = bouton
  * désactivé. L'état est annoncé aux lecteurs d'écran via l'`aria-label`.
+ *
+ * Couleur des nœuds = **orange de marque** (progression cohérente dans toute
+ * l'app), indépendante du domaine ; le blanc de l'icône reste AA sur l'orange.
  */
-export function LessonNode({
-  node,
-  color,
-}: {
-  node: PathLessonNode;
-  color: string;
-}): ReactElement {
+export function LessonNode({ node }: { node: PathLessonNode }): ReactElement {
   const reduceMotion = useReducedMotion();
-  const { fill, shadow } = paletteFor(color);
+  const fill = 'var(--color-primary)';
+  const shadow = 'var(--color-primary-shadow)';
 
   const label = `Leçon ${node.title} — ${STATE_LABEL[node.state]}`;
 

@@ -218,7 +218,7 @@ export function LessonSession({ lessonId }: { lessonId: string }): ReactElement 
         ) : (
           <Button
             size="lg"
-            variant="green"
+            variant="brand"
             disabled={draft === null || submit.isPending}
             onClick={check}
             className="w-full touch-manipulation"

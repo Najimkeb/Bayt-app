@@ -129,7 +129,7 @@ export function CardPreview({
         <footer className="border-t-2 border-border p-5">
           <Link
             href="/review"
-            className={`${buttonVariants({ variant: 'green', size: 'lg' })} w-full`}
+            className={`${buttonVariants({ variant: 'brand', size: 'lg' })} w-full`}
           >
             Lancer une révision
           </Link>

@@ -39,7 +39,7 @@ export function ProgressHeader(): ReactElement | null {
       />
       <GoalRing ratio={ratio} met={goalMet}>
         {goalMet ? (
-          <span aria-hidden="true" className="text-feather-green">
+          <span aria-hidden="true" className="text-fox-orange">
             ✓
           </span>
         ) : (

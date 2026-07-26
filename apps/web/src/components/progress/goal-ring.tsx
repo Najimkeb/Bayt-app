@@ -39,7 +39,7 @@ export function GoalRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke={met ? 'var(--color-feather-green)' : 'var(--color-macaw)'}
+          stroke={met ? 'var(--color-fox-orange)' : 'var(--color-macaw)'}
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={circumference}
