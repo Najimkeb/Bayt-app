@@ -23,6 +23,8 @@ import type {
 import type { PathRepository } from '../application/ports/path-repository.js';
 import type { ProfileStatsRepository } from '../application/ports/profile-stats-repository.js';
 import type { ProgressRepository } from '../application/ports/progress-repository.js';
+import type { ReminderRepository } from '../application/ports/reminder-repository.js';
+import type { PushSubscriptionRepository } from '../application/ports/push-subscription-repository.js';
 import type { ReviewRepository } from '../application/ports/review-repository.js';
 import { CompleteLesson } from '../application/use-cases/complete-lesson.js';
 import { CreateExplanationDraft } from '../application/use-cases/create-explanation-draft.js';
@@ -59,6 +61,7 @@ import { GetProgress } from '../application/use-cases/get-progress.js';
 import { IncrementProgress } from '../application/use-cases/increment-progress.js';
 import { PreviewReview } from '../application/use-cases/preview-review.js';
 import { SetDailyGoal } from '../application/use-cases/set-daily-goal.js';
+import { GetReminderSettings, SaveReminderSettings } from '../application/use-cases/reminder-settings.js';
 import { SubmitExerciseAnswer } from '../application/use-cases/submit-exercise-answer.js';
 import { ReplayReviews } from '../application/use-cases/replay-reviews.js';
 import { SubmitReview } from '../application/use-cases/submit-review.js';
@@ -79,6 +82,10 @@ import {
   pathQuerySchema,
   previewQuerySchema,
   progressQuerySchema,
+  pushSubscriptionBodySchema,
+  pushUnsubscribeBodySchema,
+  reminderSettingsBodySchema,
+  reminderSettingsQuerySchema,
   resetPasswordBodySchema,
   setDailyGoalBodySchema,
   submitAnswerBodySchema,
@@ -114,6 +121,14 @@ export interface AppDependencies {
   readonly progressRepository?: ProgressRepository;
   /** Persistance du chemin ; les routes `/path` ne sont montées que si fournie. */
   readonly pathRepository?: PathRepository;
+  /**
+   * Rappels de révision (contexte « Rappels »). Les routes `/reminders` et
+   * `/push/*` ne sont montées que si `reminderRepository` est fourni. La clé
+   * publique VAPID (`vapidPublicKey`) est renvoyée au client pour l'abonnement.
+   */
+  readonly reminderRepository?: ReminderRepository;
+  readonly pushSubscriptionRepository?: PushSubscriptionRepository;
+  readonly vapidPublicKey?: string | undefined;
   /**
    * Lecture d'identité + agrégats de stats. La route `/profile` n'est montée que
    * si les deux sont fournis **et** `progressRepository` l'est aussi.
@@ -191,6 +206,9 @@ export function createApp({
   lessonRepository,
   progressRepository,
   pathRepository,
+  reminderRepository,
+  pushSubscriptionRepository,
+  vapidPublicKey,
   identityRepository,
   profileStatsRepository,
   accessRepository,
@@ -282,6 +300,13 @@ export function createApp({
       count: cards.length,
       cards: cards.map(presentDueCard),
     });
+  });
+
+  /** Nombre total de cartes dues (badge de navigation, rappels dans l'app). */
+  app.get('/reviews/count', async (context) => {
+    const count = await repository.countDue(context.get('userId'), clock());
+
+    return context.json({ count });
   });
 
   /**
@@ -464,6 +489,79 @@ export function createApp({
 
       return context.json(status);
     });
+  }
+
+  // ─── Rappels de révision (contexte « Rappels ») ───────────────────────────
+  if (reminderRepository !== undefined) {
+    const getReminderSettings = new GetReminderSettings(reminderRepository);
+    const saveReminderSettings = new SaveReminderSettings(reminderRepository);
+
+    /** Réglages de rappel de l'apprenant (défaut désactivé si aucun réglage). */
+    app.get('/reminders', async (context) => {
+      const query = reminderSettingsQuerySchema.safeParse({
+        timezone: context.req.query('timezone'),
+      });
+
+      if (!query.success) {
+        return context.json({ error: 'invalid_request', details: query.error.issues }, 400);
+      }
+
+      const pref = await getReminderSettings.execute(context.get('userId'), query.data.timezone);
+
+      // `lastRemindedDay` (état interne du CRON) ne sort jamais vers le client.
+      return context.json({ enabled: pref.enabled, hour: pref.hour, timezone: pref.timezone });
+    });
+
+    /** Active/désactive les rappels et fixe l'heure locale préférée. */
+    app.post('/reminders', async (context) => {
+      const body = reminderSettingsBodySchema.safeParse(await readJson(context.req.raw));
+
+      if (!body.success) {
+        return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
+      }
+
+      const pref = await saveReminderSettings.execute(context.get('userId'), body.data);
+
+      return context.json({ enabled: pref.enabled, hour: pref.hour, timezone: pref.timezone });
+    });
+
+    // Abonnements Web Push (niveau 2) — montés seulement si la persistance existe.
+    if (pushSubscriptionRepository !== undefined) {
+      /** Clé publique VAPID à passer à `pushManager.subscribe` côté client. */
+      app.get('/push/public-key', (context) =>
+        context.json({ publicKey: vapidPublicKey ?? null }),
+      );
+
+      /** Enregistre l'abonnement Push du navigateur (upsert par endpoint). */
+      app.post('/push/subscribe', async (context) => {
+        const body = pushSubscriptionBodySchema.safeParse(await readJson(context.req.raw));
+
+        if (!body.success) {
+          return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
+        }
+
+        await pushSubscriptionRepository.save(context.get('userId'), {
+          endpoint: body.data.endpoint,
+          p256dh: body.data.keys.p256dh,
+          auth: body.data.keys.auth,
+        });
+
+        return context.json({ ok: true }, 201);
+      });
+
+      /** Supprime l'abonnement (l'apprenant coupe les push sur cet appareil). */
+      app.post('/push/unsubscribe', async (context) => {
+        const body = pushUnsubscribeBodySchema.safeParse(await readJson(context.req.raw));
+
+        if (!body.success) {
+          return context.json({ error: 'invalid_request', details: body.error.issues }, 400);
+        }
+
+        await pushSubscriptionRepository.deleteByEndpoint(body.data.endpoint);
+
+        return context.json({ ok: true });
+      });
+    }
   }
 
   if (

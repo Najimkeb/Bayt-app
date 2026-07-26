@@ -65,6 +65,9 @@ export interface ReviewRepository {
   /** Nombre de cartes dues par domaine (cartes sans domaine exclues). */
   dueCountsByDomain(userId: string, now: Date): Promise<ReadonlyMap<string, number>>;
 
+  /** Nombre total de cartes dues, tous domaines confondus (rappels). */
+  countDue(userId: string, now: Date): Promise<number>;
+
   /** Une carte precise, ou `null` si l'item n'existe pas. */
   findCard(userId: string, itemId: string): Promise<ReviewCard | null>;
 

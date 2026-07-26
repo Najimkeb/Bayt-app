@@ -86,6 +86,18 @@ export class InMemoryReviewRepository implements ReviewRepository {
     return Promise.resolve(counts);
   }
 
+  public countDue(userId: string, now: Date): Promise<number> {
+    let count = 0;
+    for (const item of this.#items.values()) {
+      const state = this.stateOf(userId, item.id);
+      if (state === null || state.due.getTime() <= now.getTime()) {
+        count += 1;
+      }
+    }
+
+    return Promise.resolve(count);
+  }
+
   public findCard(userId: string, itemId: string): Promise<ReviewCard | null> {
     const item = this.#items.get(itemId);
 

@@ -85,6 +85,19 @@ export class D1ReviewRepository implements ReviewRepository {
     return map;
   }
 
+  public async countDue(userId: string, now: Date): Promise<number> {
+    const rows = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(learningItems)
+      .leftJoin(
+        schedulingState,
+        and(eq(schedulingState.itemId, learningItems.id), eq(schedulingState.userId, userId)),
+      )
+      .where(or(isNull(schedulingState.itemId), lte(schedulingState.due, now.getTime())));
+
+    return Number(rows[0]?.count ?? 0);
+  }
+
   public async findCard(userId: string, itemId: string): Promise<ReviewCard | null> {
     const rows = await this.db
       .select({ item: learningItems, state: schedulingState })

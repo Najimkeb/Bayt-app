@@ -103,6 +103,55 @@ export function replayReviews(
   });
 }
 
+/** Nombre total de cartes dues (badge de navigation, rappel dans l'app). */
+export function fetchDueCount(): Promise<{ count: number }> {
+  return request<{ count: number }>('/reviews/count');
+}
+
+/** Réglages de rappel de l'apprenant (niveau 1). */
+export interface ReminderSettings {
+  readonly enabled: boolean;
+  readonly hour: number;
+  readonly timezone: string;
+}
+
+/** Lit les réglages de rappel (défaut désactivé si aucun réglage). */
+export function fetchReminderSettings(timezone: string): Promise<ReminderSettings> {
+  return request<ReminderSettings>(`/reminders?timezone=${encodeURIComponent(timezone)}`);
+}
+
+/** Enregistre les réglages de rappel. */
+export function saveReminderSettings(settings: ReminderSettings): Promise<ReminderSettings> {
+  return request<ReminderSettings>('/reminders', {
+    method: 'POST',
+    body: JSON.stringify(settings),
+  });
+}
+
+/** Clé publique VAPID à passer à `pushManager.subscribe` (niveau 2). */
+export function fetchPushPublicKey(): Promise<{ publicKey: string | null }> {
+  return request<{ publicKey: string | null }>('/push/public-key');
+}
+
+/** Enregistre l'abonnement Web Push du navigateur. */
+export function savePushSubscription(subscription: {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+}): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/push/subscribe', {
+    method: 'POST',
+    body: JSON.stringify(subscription),
+  });
+}
+
+/** Supprime l'abonnement Web Push (cet appareil). */
+export function deletePushSubscription(endpoint: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/push/unsubscribe', {
+    method: 'POST',
+    body: JSON.stringify({ endpoint }),
+  });
+}
+
 /** Une leçon jouable (exercices sans leurs solutions). */
 export function fetchLesson(lessonId: string): Promise<Lesson> {
   return request<Lesson>(`/lessons/${encodeURIComponent(lessonId)}`);

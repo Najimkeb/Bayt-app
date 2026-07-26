@@ -10,6 +10,7 @@ import { ActivityChart } from './activity-chart';
 import { DomainProgress } from './domain-progress';
 import { MemoryHealthCard } from './memory-health';
 import { ProfileHeader } from './profile-header';
+import { ReminderSettings } from './reminder-settings';
 import { SettingsPanel } from './settings-panel';
 import { StatCards } from './stat-cards';
 import { StudyHeatmap } from './study-heatmap';
@@ -66,6 +67,10 @@ export function ProfileScreen(): ReactElement {
 
       <Section title="Réglages">
         <SettingsPanel dailyGoal={data.settings.dailyGoal} />
+      </Section>
+
+      <Section title="Rappels">
+        <ReminderSettings />
       </Section>
     </div>
   );

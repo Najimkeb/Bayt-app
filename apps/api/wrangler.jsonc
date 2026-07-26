@@ -43,6 +43,16 @@
     ]
   },
 
+  // Rappels de révision (niveau 2) : le CRON balaie chaque heure les apprenants
+  // dont l'heure locale préférée tombe maintenant + qui ont des cartes dues, et
+  // envoie un Web Push (au plus un par jour). `VAPID_PUBLIC_KEY` est public (passé
+  // au navigateur) ; la clé privée (`VAPID_PRIVATE_JWK`) et le sujet sont des
+  // secrets Worker (`wrangler secret put`). En local, ils vivent dans `.dev.vars`.
+  "triggers": { "crons": ["0 * * * *"] },
+  "vars": {
+    "VAPID_PUBLIC_KEY": "BCAs8foEA_Togh4i1wWT6DX1omj0T_7t59pUwaLk9EvzwzV39vXskc2kYa0FZR4U9VgSOT4RUKJAr6vZXGfL5TM"
+  },
+
   // Workers AI : branche le vrai générateur de cartes (agent LLM).
   // Le binding `AI` expose les modèles Workers AI sur l'infra Cloudflare (aucune
   // clé externe). En `wrangler dev`, les appels sont relayés vers Workers AI en
@@ -68,8 +78,12 @@
       // host-only (first-party) sur l'hôte du front. Aucune référence à bayt.app.
       "vars": {
         "WEB_ORIGIN": "https://bayt-web-production.najimkeb31.workers.dev",
-        "BETTER_AUTH_URL": "https://bayt-web-production.najimkeb31.workers.dev"
+        "BETTER_AUTH_URL": "https://bayt-web-production.najimkeb31.workers.dev",
+        "VAPID_PUBLIC_KEY": "BCAs8foEA_Togh4i1wWT6DX1omj0T_7t59pUwaLk9EvzwzV39vXskc2kYa0FZR4U9VgSOT4RUKJAr6vZXGfL5TM"
       },
+      // Le CRON de rappels doit aussi être déclaré dans l'environnement de prod
+      // (les triggers ne sont pas hérités du top-level).
+      "triggers": { "crons": ["0 * * * *"] },
       "d1_databases": [
         {
           "binding": "DB",

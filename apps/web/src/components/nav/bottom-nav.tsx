@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactElement } from 'react';
 
+import { useDueCount } from '@/lib/api/reminder-queries';
+import { useUserId } from '@/lib/auth/use-user-id';
+
 /** Onglets de la barre basse. */
 const TABS: readonly { href: string; label: string; icon: LucideIcon; match: (p: string) => boolean }[] = [
   { href: '/', label: 'Accueil', icon: Home, match: (p) => p === '/' },
@@ -37,6 +40,8 @@ function isHidden(pathname: string): boolean {
  */
 export function BottomNav(): ReactElement | null {
   const pathname = usePathname();
+  const userId = useUserId();
+  const dueCount = useDueCount(userId).data?.count ?? 0;
 
   if (isHidden(pathname)) {
     return null;
@@ -51,6 +56,8 @@ export function BottomNav(): ReactElement | null {
         {TABS.map((tab) => {
           const active = tab.match(pathname);
           const Icon = tab.icon;
+          // Badge « cartes dues » sur l'accueil (masqué à zéro), 99+ au-delà.
+          const badge = tab.href === '/' && dueCount > 0 ? (dueCount > 99 ? '99+' : String(dueCount)) : null;
 
           return (
             <li key={tab.href} className="flex-1">
@@ -61,7 +68,17 @@ export function BottomNav(): ReactElement | null {
                   active ? 'text-fox-orange' : 'text-muted-foreground'
                 }`}
               >
-                <Icon aria-hidden="true" className="size-6" strokeWidth={active ? 2.6 : 2} />
+                <span className="relative">
+                  <Icon aria-hidden="true" className="size-6" strokeWidth={active ? 2.6 : 2} />
+                  {badge !== null && (
+                    <span
+                      className="absolute -right-2.5 -top-1.5 min-w-[1.1rem] rounded-full border-2 border-surface bg-cardinal px-1 text-[0.6rem] font-black leading-4 text-white tabular-nums"
+                      aria-label={`${String(dueCount)} carte${dueCount > 1 ? 's' : ''} à réviser`}
+                    >
+                      {badge}
+                    </span>
+                  )}
+                </span>
                 {tab.label}
               </Link>
             </li>

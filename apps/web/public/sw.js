@@ -74,6 +74,61 @@ async function cacheFirst(request) {
   return response;
 }
 
+/*
+ * Rappels Web Push (niveau 2).
+ *
+ * `push` : affiche la notification (contenu chiffré envoyé par le Worker/CRON).
+ * `notificationclick` : ouvre — ou refocus — directement la session de révision.
+ * Repli robuste si le payload est absent/illisible : un rappel neutre plutôt que
+ * rien.
+ */
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = {};
+  }
+  const title = data.title || 'BAYT — c’est le moment d’ancrer';
+  const body = data.body || 'Tu as des cartes à réviser aujourd’hui 🐝';
+  const url = data.url || '/review';
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: 'bayt-review-reminder',
+      data: { url },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || '/review';
+
+  event.waitUntil(
+    (async () => {
+      const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      // Refocus un onglet BAYT déjà ouvert, sinon en ouvre un sur la révision.
+      for (const client of all) {
+        if (new URL(client.url).origin === self.location.origin && 'focus' in client) {
+          await client.focus();
+          if ('navigate' in client) {
+            await client.navigate(target);
+          }
+
+          return;
+        }
+      }
+      if (self.clients.openWindow) {
+        await self.clients.openWindow(target);
+      }
+    })(),
+  );
+});
+
 async function networkFirstNavigation(request) {
   const cache = await caches.open(CACHE);
   try {

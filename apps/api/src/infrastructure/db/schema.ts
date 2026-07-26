@@ -385,3 +385,45 @@ export const documents = sqliteTable(
   },
   (table) => [index('documents_user_created_idx').on(table.userId, table.createdAt)],
 );
+
+/**
+ * Préférences de rappel de révision — contexte « Rappels ».
+ *
+ * Décide *quand* rappeler à l'apprenant qu'il a des cartes dues. Le fuseau et
+ * l'heure préférée pilotent le créneau ; `last_reminded_day` (jour local
+ * `YYYY-MM-DD`) garantit **au plus un rappel par jour**. Désactivé par défaut :
+ * jamais de notification non consentie.
+ */
+export const reminderPrefs = sqliteTable('reminder_prefs', {
+  userId: text('user_id').primaryKey(),
+  enabled: integer('enabled').notNull().default(0),
+  /** Heure locale préférée (0–23). */
+  hour: integer('hour').notNull().default(9),
+  timezone: text('timezone').notNull().default('UTC'),
+  /** Dernier jour local où un rappel a été envoyé (`YYYY-MM-DD`) ou `null`. */
+  lastRemindedDay: text('last_reminded_day'),
+});
+
+/**
+ * Abonnements Web Push (RFC 8291) — contexte « Rappels », niveau 2.
+ *
+ * Un apprenant installé (PWA standalone) peut recevoir un push même app fermée.
+ * `endpoint` identifie de façon unique un abonnement navigateur ; `p256dh` et
+ * `auth` sont les clés publiques de chiffrement fournies par le navigateur. Un
+ * endpoint révoqué (404/410 à l'envoi) est supprimé — jamais de push aveugle.
+ */
+export const pushSubscriptions = sqliteTable(
+  'push_subscriptions',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    endpoint: text('endpoint').notNull(),
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('push_subscriptions_endpoint_idx').on(table.endpoint),
+    index('push_subscriptions_user_idx').on(table.userId),
+  ],
+);

@@ -90,13 +90,23 @@ function WelcomeMascot({
     : goalMet
       ? 'Objectif du jour atteint, bravo ! Continue sur ta lancée.'
       : dueCount > 0
-        ? `Tu as ${String(dueCount)} carte${dueCount > 1 ? 's' : ''} à réviser — c'est le meilleur moment pour ancrer.`
+        ? `Tu as ${String(dueCount)} carte${dueCount > 1 ? 's' : ''} à réviser aujourd'hui — c'est le meilleur moment pour ancrer.`
         : 'Prêt à avancer sur ton chemin ? Choisis un domaine.';
 
   return (
     <div className="flex items-center gap-4 rounded-[var(--radius-card)] border-2 border-border bg-surface p-4">
       <Mascot mood={goalMet ? 'celebrating' : 'idle'} size="md" priority />
-      <p className="text-base font-bold leading-relaxed text-muted-foreground">{message}</p>
+      <div className="flex min-w-0 flex-col gap-2">
+        <p className="text-base font-bold leading-relaxed text-muted-foreground">{message}</p>
+        {!loading && dueCount > 0 && (
+          <Link
+            href="/review"
+            className="w-fit rounded-full bg-fox-orange px-4 py-1.5 text-sm font-extrabold text-white transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            Réviser maintenant
+          </Link>
+        )}
+      </div>
     </div>
   );
 }

@@ -89,6 +89,30 @@ export const setDailyGoalBodySchema = z.object({
   timezone,
 });
 
+/** Lecture des réglages de rappel (fuseau pour la préférence par défaut). */
+export const reminderSettingsQuerySchema = z.object({ timezone });
+
+/** Réglages de rappel : activer/désactiver, heure locale (0–23), fuseau. */
+export const reminderSettingsBodySchema = z.object({
+  enabled: z.boolean(),
+  hour: z.coerce.number().int().min(0).max(23),
+  timezone,
+});
+
+/** Abonnement Web Push envoyé par le navigateur (clés base64url). */
+export const pushSubscriptionBodySchema = z.object({
+  endpoint: z.string().url().max(2000),
+  keys: z.object({
+    p256dh: z.string().min(1).max(256),
+    auth: z.string().min(1).max(256),
+  }),
+});
+
+/** Désabonnement : identifié par son endpoint. */
+export const pushUnsubscribeBodySchema = z.object({
+  endpoint: z.string().url().max(2000),
+});
+
 /** Ajout d'un e-mail à la liste blanche (admin). */
 export const addAllowedEmailBodySchema = z.object({
   email: z.string().email().max(320),

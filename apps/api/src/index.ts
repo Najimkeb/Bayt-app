@@ -27,7 +27,11 @@ import {
 import { D1PathRepository } from './infrastructure/repositories/d1-path.repository.js';
 import { D1ProfileStatsRepository } from './infrastructure/repositories/d1-profile-stats.repository.js';
 import { D1ProgressRepository } from './infrastructure/repositories/d1-progress.repository.js';
+import { D1ReminderRepository } from './infrastructure/repositories/d1-reminder.repository.js';
+import { D1PushSubscriptionRepository } from './infrastructure/repositories/d1-push-subscription.repository.js';
 import { D1ReviewRepository } from './infrastructure/repositories/d1-review.repository.js';
+import { WebPushSender } from './infrastructure/push/web-push.js';
+import { SendDueReminders } from './application/use-cases/send-due-reminders.js';
 import { D1DocumentStorage } from './infrastructure/storage/d1-document-storage.js';
 
 /**
@@ -63,6 +67,15 @@ export interface Env {
    * Provisionné, pas encore consommé par le code — binding prêt à l'emploi.
    */
   readonly KV?: KVNamespace;
+  /**
+   * Rappels Web Push (niveau 2). Clés VAPID : la publique est un `var` (passée
+   * au navigateur), la privée un **secret** Worker (JWK JSON). Sans elles, les
+   * rappels dans l'app (niveau 1) fonctionnent, mais aucun push n'est envoyé.
+   */
+  readonly VAPID_PUBLIC_KEY?: string;
+  readonly VAPID_PRIVATE_JWK?: string;
+  /** Sujet VAPID (contact), ex. `mailto:hello@bayt.app`. */
+  readonly VAPID_SUBJECT?: string;
 }
 
 /** Origines du front autorisées (session + CORS) — surchargées par `WEB_ORIGIN`. */
@@ -106,6 +119,42 @@ function createIngestor(db: DrizzleD1Database, env: Env): IngestDocument {
 }
 
 /**
+ * Construit le cas d'usage du CRON de rappels, ou `null` si les clés VAPID
+ * manquent (niveau 2 non configuré → on ne pousse rien, le niveau 1 reste actif).
+ */
+function createReminderSender(db: DrizzleD1Database, env: Env): SendDueReminders | null {
+  if (env.VAPID_PUBLIC_KEY === undefined || env.VAPID_PRIVATE_JWK === undefined) {
+    console.log('[reminders] Clés VAPID absentes → CRON de push inactif (niveau 1 seul).');
+
+    return null;
+  }
+
+  let privateJwk: JsonWebKey;
+  try {
+    privateJwk = JSON.parse(env.VAPID_PRIVATE_JWK) as JsonWebKey;
+  } catch {
+    console.error('[reminders] VAPID_PRIVATE_JWK invalide (JSON) → CRON de push inactif.');
+
+    return null;
+  }
+
+  const sender = new WebPushSender({
+    publicKey: env.VAPID_PUBLIC_KEY,
+    privateJwk,
+    subject: env.VAPID_SUBJECT ?? 'mailto:hello@bayt.app',
+  });
+  const webOrigin = webOrigins(env)[0] ?? 'http://localhost:3000';
+
+  return new SendDueReminders(
+    new D1ReminderRepository(db),
+    new D1PushSubscriptionRepository(db),
+    new D1ReviewRepository(db),
+    sender,
+    `${webOrigin}/review`,
+  );
+}
+
+/**
  * Point d'entree du Worker BAYT — la seule couche qui connaisse Cloudflare.
  *
  * `fetch` cable les bindings sur l'application HTTP ; `queue` traite les
@@ -136,6 +185,9 @@ export default {
       lessonRepository: new D1LessonRepository(db),
       progressRepository: new D1ProgressRepository(db),
       pathRepository: new D1PathRepository(db),
+      reminderRepository: new D1ReminderRepository(db),
+      pushSubscriptionRepository: new D1PushSubscriptionRepository(db),
+      vapidPublicKey: env.VAPID_PUBLIC_KEY,
       identityRepository: new D1IdentityRepository(db),
       profileStatsRepository: new D1ProfileStatsRepository(db),
       accessRepository,
@@ -177,5 +229,31 @@ export default {
       await ingest.execute(message.body.documentId);
       message.ack();
     }
+  },
+
+  /**
+   * CRON de rappels (niveau 2). Déclenché périodiquement (cf. `triggers.crons`
+   * dans wrangler.jsonc). À chaque tick, on ne rappelle que les apprenants dont
+   * l'heure locale préférée tombe maintenant, qui ont des cartes dues, et pas
+   * déjà rappelés aujourd'hui — au plus **un rappel par jour** (cf. domaine).
+   */
+  async scheduled(_event: ScheduledController, env: Env, context: ExecutionContext): Promise<void> {
+    const sender = createReminderSender(drizzle(env.DB), env);
+    if (sender === null) {
+      return;
+    }
+
+    context.waitUntil(
+      sender
+        .execute(new Date())
+        .then((result) =>
+          console.log(
+            `[reminders] tick — ${String(result.remindedUsers)} apprenant(s), ${String(result.sent)} push, ${String(result.pruned)} abonnement(s) élagué(s).`,
+          ),
+        )
+        .catch((error: unknown) =>
+          console.error('[reminders] échec du tick :', error instanceof Error ? error.message : error),
+        ),
+    );
   },
 };

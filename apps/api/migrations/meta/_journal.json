@@ -1,97 +1,104 @@
 {
-  "version": "7",
-  "dialect": "sqlite",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "6",
-      "when": 1784753478635,
-      "tag": "0000_learning_engine",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1784797487191,
-      "tag": "0001_lessons_exercises",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1784806672986,
-      "tag": "0002_user_progress",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1784811547202,
-      "tag": "0003_path_units",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1784814869853,
-      "tag": "0004_documents",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1784829458747,
-      "tag": "0005_nostalgic_invaders",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1784837822678,
-      "tag": "0006_drop_r2_add_extracted_text",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1784911279530,
-      "tag": "0007_catalog_domains",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "6",
-      "when": 1784997679530,
-      "tag": "0008_domain_icons",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1785072679530,
-      "tag": "0009_admin_access",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "6",
-      "when": 1785159079530,
-      "tag": "0010_sourced_lesson_drafts",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "6",
-      "when": 1785245479530,
-      "tag": "0011_explanation_logs",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "6",
-      "when": 1785331879530,
-      "tag": "0012_review_client_id",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "sqlite",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "6",
+			"when": 1784753478635,
+			"tag": "0000_learning_engine",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "6",
+			"when": 1784797487191,
+			"tag": "0001_lessons_exercises",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "6",
+			"when": 1784806672986,
+			"tag": "0002_user_progress",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "6",
+			"when": 1784811547202,
+			"tag": "0003_path_units",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "6",
+			"when": 1784814869853,
+			"tag": "0004_documents",
+			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "6",
+			"when": 1784829458747,
+			"tag": "0005_nostalgic_invaders",
+			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "6",
+			"when": 1784837822678,
+			"tag": "0006_drop_r2_add_extracted_text",
+			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "6",
+			"when": 1784911279530,
+			"tag": "0007_catalog_domains",
+			"breakpoints": true
+		},
+		{
+			"idx": 8,
+			"version": "6",
+			"when": 1784997679530,
+			"tag": "0008_domain_icons",
+			"breakpoints": true
+		},
+		{
+			"idx": 9,
+			"version": "6",
+			"when": 1785072679530,
+			"tag": "0009_admin_access",
+			"breakpoints": true
+		},
+		{
+			"idx": 10,
+			"version": "6",
+			"when": 1785159079530,
+			"tag": "0010_sourced_lesson_drafts",
+			"breakpoints": true
+		},
+		{
+			"idx": 11,
+			"version": "6",
+			"when": 1785245479530,
+			"tag": "0011_explanation_logs",
+			"breakpoints": true
+		},
+		{
+			"idx": 12,
+			"version": "6",
+			"when": 1785331879530,
+			"tag": "0012_review_client_id",
+			"breakpoints": true
+		},
+		{
+			"idx": 13,
+			"version": "6",
+			"when": 1785092932618,
+			"tag": "0013_reminders",
+			"breakpoints": true
+		}
+	]
 }
