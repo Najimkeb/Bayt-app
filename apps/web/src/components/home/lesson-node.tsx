@@ -21,7 +21,7 @@ export function LessonNode({ node }: { node: PathLessonNode }): ReactElement {
   const fill = 'var(--color-primary)';
   const shadow = 'var(--color-primary-shadow)';
 
-  const label = `Leçon ${node.title} — ${STATE_LABEL[node.state]}`;
+  const label = `Leçon ${node.title} : ${STATE_LABEL[node.state]}`;
 
   // Nœud verrouillé : non cliquable.
   if (node.state === 'locked') {

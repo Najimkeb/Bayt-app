@@ -13,9 +13,9 @@ const NOW = new Date('2026-03-01T09:00:00.000Z');
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const ITEMS: readonly LearningItemView[] = [
-  { id: 'item-a', type: 'flashcard', front: 'Qu\'est-ce que FSRS ?', back: 'Un algorithme SRS.' },
-  { id: 'item-b', type: 'flashcard', front: 'Que veut dire D1 ?', back: 'La base SQL de Cloudflare.' },
-  { id: 'item-c', type: 'cloze', front: 'Cloudflare {{c1::Workers}}', back: 'Workers' },
+  { id: 'item-a', type: 'flashcard', front: 'Qu\'est-ce que FSRS ?', back: 'Un algorithme SRS.', domainId: null },
+  { id: 'item-b', type: 'flashcard', front: 'Que veut dire D1 ?', back: 'La base SQL de Cloudflare.', domainId: null },
+  { id: 'item-c', type: 'cloze', front: 'Cloudflare {{c1::Workers}}', back: 'Workers', domainId: null },
 ];
 
 const scheduler = new Scheduler();

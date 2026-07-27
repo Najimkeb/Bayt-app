@@ -4,6 +4,8 @@ import { Button, Mascot, ProgressBar, type MascotMood } from '@bayt/ui';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 
+import { useDomains } from '@/lib/api/domain-queries';
+import type { DomainOverview } from '@/lib/api/domain-types';
 import { useIncrementProgress } from '@/lib/api/progress-queries';
 import { useDueQueue, usePreview, useSubmitReview } from '@/lib/api/queries';
 import { useSync } from '@/lib/offline/sync-provider';
@@ -45,7 +47,18 @@ export function ReviewSession({ domainId }: { domainId?: string | undefined } = 
   const queue = useDueQueue(userId, domainId);
   const submit = useSubmitReview(userId, domainId);
   const increment = useIncrementProgress(userId);
+  const domains = useDomains(userId);
   const { online, pending } = useSync();
+
+  // Résolution du domaine de chaque carte (badge) : id → domaine du catalogue.
+  const domainsById = useMemo(() => {
+    const map = new Map<string, DomainOverview>();
+    for (const d of domains.data?.domains ?? []) {
+      map.set(d.id, d);
+    }
+
+    return map;
+  }, [domains.data]);
 
   const [revealed, setRevealed] = useState(false);
   const [lastGrade, setLastGrade] = useState<ReviewGrade | null>(null);
@@ -237,7 +250,7 @@ export function ReviewSession({ domainId }: { domainId?: string | undefined } = 
         >
           {online
             ? `${String(pending)} révision${pending > 1 ? 's' : ''} en cours de synchronisation…`
-            : 'Hors-ligne — tes révisions sont enregistrées et seront synchronisées.'}
+            : 'Hors-ligne. Tes révisions sont enregistrées et seront synchronisées.'}
         </p>
       )}
 
@@ -249,7 +262,12 @@ export function ReviewSession({ domainId }: { domainId?: string | undefined } = 
           exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -18, scale: 0.98 }}
           transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         >
-          <Flashcard card={card} revealed={revealed} onReveal={reveal} />
+          <Flashcard
+            card={card}
+            domain={card.item.domainId != null ? (domainsById.get(card.item.domainId) ?? null) : null}
+            revealed={revealed}
+            onReveal={reveal}
+          />
         </motion.div>
       </AnimatePresence>
 

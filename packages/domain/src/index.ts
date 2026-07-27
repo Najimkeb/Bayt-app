@@ -16,6 +16,7 @@ export * from './gamification/index.js';
 export * from './catalog/index.js';
 export * from './explanation/index.js';
 export * from './reminders/index.js';
+export * from './quiz/index.js';
 
 /** Version du contrat de domaine, utile pour tracer les `ReviewLog` produits. */
 export const DOMAIN_VERSION = '0.1.0';

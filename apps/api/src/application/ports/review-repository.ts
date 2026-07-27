@@ -1,4 +1,4 @@
-import type { ReviewLog, SchedulingState } from '@bayt/domain';
+import type { QuizSourceItem, ReviewLog, SchedulingState } from '@bayt/domain';
 
 /** Type d'item revisable — reflete la colonne `learning_items.type`. */
 export type LearningItemType = 'flashcard' | 'cloze' | 'practice_case';
@@ -9,6 +9,8 @@ export interface LearningItemView {
   readonly type: LearningItemType;
   readonly front: string;
   readonly back: string;
+  /** Domaine de rattachement (badge en révision), ou `null` si non catégorisé. */
+  readonly domainId: string | null;
 }
 
 /**
@@ -65,11 +67,26 @@ export interface ReviewRepository {
   /** Nombre de cartes dues par domaine (cartes sans domaine exclues). */
   dueCountsByDomain(userId: string, now: Date): Promise<ReadonlyMap<string, number>>;
 
+  /**
+   * Nombre TOTAL de cartes par domaine (dues ou non). Sert à l'état « à remplir »
+   * de l'accueil : un domaine avec des cartes n'est jamais vide, même si aucune
+   * n'est due maintenant.
+   */
+  cardCountsByDomain(): Promise<ReadonlyMap<string, number>>;
+
   /** Nombre total de cartes dues, tous domaines confondus (rappels). */
   countDue(userId: string, now: Date): Promise<number>;
 
   /** Une carte precise, ou `null` si l'item n'existe pas. */
   findCard(userId: string, itemId: string): Promise<ReviewCard | null>;
+
+  /**
+   * Échantillon aléatoire de cartes (front/back) pour construire un **quiz** :
+   * un domaine précis, ou tous domaines confondus si `domainId` est absent. Sert
+   * de matière aux questions ET de distracteurs. **Lecture seule** (aucun état
+   * FSRS lu ou écrit) — le quiz ne touche pas à la mémoire.
+   */
+  itemsForQuiz(domainId: string | undefined, limit: number): Promise<readonly QuizSourceItem[]>;
 
   /**
    * Enregistre une revision : nouvel etat **et** ajout du log, atomiquement.

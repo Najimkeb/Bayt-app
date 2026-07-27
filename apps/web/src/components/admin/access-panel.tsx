@@ -9,13 +9,13 @@ import type { AllowedEmail } from '@/lib/api/admin-types';
 
 /** Formate une date epoch ms en « JJ mois AAAA » (français). */
 function formatDay(ms: number): string {
-  if (ms === 0) return '—';
+  if (ms === 0) return '-';
   try {
     return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).format(
       new Date(ms),
     );
   } catch {
-    return '—';
+    return '-';
   }
 }
 

@@ -35,7 +35,7 @@ export function SettingsPanel({ dailyGoal }: { dailyGoal: number }): ReactElemen
       <fieldset className="flex flex-col gap-3" disabled={setGoal.isPending}>
         <legend className="text-sm font-extrabold">Objectif quotidien</legend>
         <p className="text-xs font-bold text-muted-foreground">
-          Choisis ta cible d&apos;XP par jour. Elle règle ta série — jamais ta mémoire.
+          Choisis ta cible d&apos;XP par jour. Elle règle ta série, jamais ta mémoire.
         </p>
         <div role="radiogroup" aria-label="Objectif quotidien en XP" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {PRESETS.map((preset) => {

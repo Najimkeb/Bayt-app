@@ -149,7 +149,7 @@ export function StudioPanel(): ReactElement {
         </Button>
         <p className="text-xs font-bold text-muted-foreground">
           L&apos;IA cherche sur le web et rédige à partir des sources trouvées. Tu relis et valides
-          avant toute publication — rien n&apos;entre en mémoire sans ta validation.
+          avant toute publication : rien n&apos;entre en mémoire sans ta validation.
         </p>
       </form>
 

@@ -100,7 +100,7 @@ function LockedTrends({ studyDays }: { studyDays: number }): ReactElement {
       <Mascot mood="encouraging" size="md" priority />
       <p className="text-lg font-extrabold">Tes tendances arrivent bientôt</p>
       <p className="max-w-sm text-sm font-bold text-muted-foreground">
-        Continue à réviser pour débloquer ton graphique d&apos;activité — il te faut{' '}
+        Continue à réviser pour débloquer ton graphique d&apos;activité, il te faut{' '}
         <span className="font-black text-foreground">7 jours d&apos;étude</span>, tu en es à{' '}
         <span className="font-black text-foreground">{studyDays}</span>. Chaque jour compte !
       </p>

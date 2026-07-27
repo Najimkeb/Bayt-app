@@ -35,7 +35,7 @@ export function LessonComplete({
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-extrabold tracking-tight">Leçon terminée !</h1>
         <p className="text-base font-bold leading-relaxed text-muted-foreground">
-          Bravo pour « {title} ». Chaque réponse a nourri ta mémoire — ces items
+          Bravo pour « {title} ». Chaque réponse a nourri ta mémoire. Ces items
           reviendront au bon moment.
         </p>
       </div>

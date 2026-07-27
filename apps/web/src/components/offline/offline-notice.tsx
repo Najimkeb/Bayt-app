@@ -15,7 +15,7 @@ export function OfflineNotice({ action }: { action?: string }): ReactElement {
     >
       <CloudOff aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-[#8a6d00]" />
       <p className="text-sm font-bold text-[#8a6d00]">
-        {action ?? 'Cette action'} nécessite une connexion. Reviens en ligne pour continuer — tes
+        {action ?? 'Cette action'} nécessite une connexion. Reviens en ligne pour continuer, tes
         révisions, elles, fonctionnent hors-ligne.
       </p>
     </div>

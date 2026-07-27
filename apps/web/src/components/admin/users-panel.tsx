@@ -14,7 +14,7 @@ function formatDate(ms: number | null): string {
       new Date(ms),
     );
   } catch {
-    return '—';
+    return '-';
   }
 }
 

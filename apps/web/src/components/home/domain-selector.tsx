@@ -56,11 +56,15 @@ function DomainTab({
   onSelect: () => void;
 }): ReactElement {
   const { fill } = paletteFor(domain.color);
-  const empty = domain.lessonsTotal === 0;
+  // Vide seulement s'il n'y a NI leçon NI carte (corrige : un domaine rempli par
+  // import de documents a des cartes sans leçon, il n'est donc pas « à remplir »).
+  const empty = domain.lessonsTotal === 0 && domain.cardsTotal === 0;
 
   const progressLabel = empty
     ? 'à remplir'
-    : `${String(domain.lessonsCompleted)}/${String(domain.lessonsTotal)} leçons`;
+    : domain.lessonsTotal > 0
+      ? `${String(domain.lessonsCompleted)}/${String(domain.lessonsTotal)} leçons`
+      : `${String(domain.cardsTotal)} carte${domain.cardsTotal > 1 ? 's' : ''}`;
 
   const style = selected
     ? ({ borderColor: fill, backgroundColor: `${fill}1a` } as CSSProperties)
@@ -71,7 +75,7 @@ function DomainTab({
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      aria-label={`${domain.name} — ${progressLabel}${
+      aria-label={`${domain.name} : ${progressLabel}${
         domain.cardsDue > 0 ? `, ${String(domain.cardsDue)} carte(s) à réviser` : ''
       }`}
       style={style}

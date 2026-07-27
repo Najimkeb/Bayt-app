@@ -5,6 +5,7 @@ import type { EvaluationResult, ExplanationHistoryEntry } from './explanation-ty
 import type { DocumentCards, DocumentDto, DocumentList } from './document-types';
 import type { AnswerResult, ExerciseAnswer, Lesson } from './lesson-types';
 import type { LearningPath } from './path-types';
+import type { QuizResponse, QuizType } from './quiz-types';
 import type { ProfileData } from './profile-types';
 import type { DailyStatus, IncrementResult, XpEvent } from './progress-types';
 import type { DueQueue, Preview, ReviewGrade, ReviewResult } from './types';
@@ -106,6 +107,23 @@ export function replayReviews(
 /** Nombre total de cartes dues (badge de navigation, rappel dans l'app). */
 export function fetchDueCount(): Promise<{ count: number }> {
   return request<{ count: number }>('/reviews/count');
+}
+
+/** Génère un quiz à partir des cartes existantes (aucune écriture FSRS). */
+export function fetchQuiz(input: {
+  domainId?: string;
+  count: number;
+  types: readonly QuizType[];
+}): Promise<QuizResponse> {
+  const params = new URLSearchParams({ count: String(input.count) });
+  if (input.domainId !== undefined) {
+    params.set('domainId', input.domainId);
+  }
+  if (input.types.length > 0) {
+    params.set('types', input.types.join(','));
+  }
+
+  return request<QuizResponse>(`/quiz?${params.toString()}`);
 }
 
 /** Réglages de rappel de l'apprenant (niveau 1). */

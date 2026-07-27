@@ -8,8 +8,8 @@ import { InMemoryReviewRepository } from '../../src/infrastructure/repositories/
 import { alwaysUser } from '../support/session.js';
 
 const ITEMS: readonly LearningItemView[] = [
-  { id: 'i-mcq', type: 'flashcard', front: 'q', back: 'D1' },
-  { id: 'i-match', type: 'flashcard', front: 'q', back: '…' },
+  { id: 'i-mcq', type: 'flashcard', front: 'q', back: 'D1', domainId: null },
+  { id: 'i-match', type: 'flashcard', front: 'q', back: '…', domainId: null },
 ];
 
 const LESSON: Lesson = {

@@ -13,8 +13,8 @@ const USER = 'demo';
 const NOW = new Date('2026-03-01T09:00:00.000Z');
 
 const ITEMS: readonly LearningItemView[] = [
-  { id: 'i-mcq', type: 'flashcard', front: 'q', back: 'D1' },
-  { id: 'i-fill', type: 'flashcard', front: 'q', back: 'Ebbinghaus' },
+  { id: 'i-mcq', type: 'flashcard', front: 'q', back: 'D1', domainId: null },
+  { id: 'i-fill', type: 'flashcard', front: 'q', back: 'Ebbinghaus', domainId: null },
 ];
 
 const LESSON: Lesson = {

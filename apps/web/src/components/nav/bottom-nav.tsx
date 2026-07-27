@@ -22,6 +22,7 @@ const TABS: readonly { href: string; label: string; icon: LucideIcon; match: (p:
 function isHidden(pathname: string): boolean {
   return (
     pathname === '/review' ||
+    pathname === '/quiz' ||
     pathname.startsWith('/lesson/') ||
     pathname.startsWith('/admin/lessons/') ||
     pathname === '/login' ||

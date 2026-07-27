@@ -33,7 +33,13 @@ export class InMemoryReviewRepository implements ReviewRepository {
 
   public constructor(items: readonly SeedItem[] = []) {
     for (const item of items) {
-      this.#items.set(item.id, { id: item.id, type: item.type, front: item.front, back: item.back });
+      this.#items.set(item.id, {
+        id: item.id,
+        type: item.type,
+        front: item.front,
+        back: item.back,
+        domainId: item.domainId ?? null,
+      });
       this.#domainOf.set(item.id, item.domainId ?? null);
     }
   }
@@ -86,6 +92,18 @@ export class InMemoryReviewRepository implements ReviewRepository {
     return Promise.resolve(counts);
   }
 
+  public cardCountsByDomain(): Promise<ReadonlyMap<string, number>> {
+    const counts = new Map<string, number>();
+    for (const item of this.#items.values()) {
+      const domainId = this.#domainOf.get(item.id) ?? null;
+      if (domainId !== null) {
+        counts.set(domainId, (counts.get(domainId) ?? 0) + 1);
+      }
+    }
+
+    return Promise.resolve(counts);
+  }
+
   public countDue(userId: string, now: Date): Promise<number> {
     let count = 0;
     for (const item of this.#items.values()) {
@@ -96,6 +114,18 @@ export class InMemoryReviewRepository implements ReviewRepository {
     }
 
     return Promise.resolve(count);
+  }
+
+  public itemsForQuiz(
+    domainId: string | undefined,
+    limit: number,
+  ): Promise<readonly { id: string; front: string; back: string }[]> {
+    const rows = [...this.#items.values()]
+      .filter((item) => domainId === undefined || this.#domainOf.get(item.id) === domainId)
+      .slice(0, limit)
+      .map((item) => ({ id: item.id, front: item.front, back: item.back }));
+
+    return Promise.resolve(rows);
   }
 
   public findCard(userId: string, itemId: string): Promise<ReviewCard | null> {

@@ -168,7 +168,7 @@ function EmptyState(): ReactElement {
       <Mascot mood="encouraging" size="md" priority />
       <p className="text-lg font-extrabold">Ta bibliothèque est vide</p>
       <p className="max-w-sm text-sm font-bold text-muted-foreground">
-        Dépose un premier document — un cours, des notes, un PDF — et je le transforme en cartes à
+        Dépose un premier document (un cours, des notes, un PDF) et je le transforme en cartes à
         réviser. On commence ?
       </p>
     </div>

@@ -19,13 +19,18 @@ export interface DomainOverview {
   readonly lessonsTotal: number;
   /** Cartes de ce domaine dues maintenant. */
   readonly cardsDue: number;
+  /** Cartes de ce domaine au total (dues ou non). */
+  readonly cardsTotal: number;
 }
 
 export interface DomainList {
   readonly domains: readonly DomainOverview[];
 }
 
-/** Un domaine a-t-il du contenu jouable (au moins une leçon) ? */
+/**
+ * Un domaine a-t-il du contenu ? Des leçons OU des cartes (un domaine rempli
+ * par l'import de documents a des cartes sans forcément de leçons).
+ */
 export function hasContent(domain: DomainOverview): boolean {
-  return domain.lessonsTotal > 0;
+  return domain.lessonsTotal > 0 || domain.cardsTotal > 0;
 }

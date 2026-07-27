@@ -38,7 +38,7 @@ const MINUTE = 60_000;
 
 function card(id: string, front: string, back: string): DueQueue['cards'][number] {
   return {
-    item: { id, type: 'flashcard', front, back },
+    item: { id, type: 'flashcard', front, back , domainId: null },
     scheduling: {
       state: 'new',
       stability: 0,
@@ -137,11 +137,11 @@ describe('Ecran de revision', () => {
     // Les intervalles viennent de l'API : le front ne les calcule jamais.
     expect(
       await screen.findByRole('button', {
-        name: /Correct — Rappel correct, prochaine révision dans 10 minutes/,
+        name: /Correct : Rappel correct, prochaine révision dans 10 minutes/,
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /À revoir — Je ne savais pas, prochaine révision dans 1 minutes/ }),
+      screen.getByRole('button', { name: /À revoir : Je ne savais pas, prochaine révision dans 1 minutes/ }),
     ).toBeInTheDocument();
   });
 

@@ -127,7 +127,7 @@ export function VocabPanel(): ReactElement {
       {/* Estimation avant génération (économie de quota). */}
       <p className="rounded-[var(--radius-button)] bg-surface-hover/60 px-3 py-2 text-xs font-bold text-muted-foreground">
         ~{BATCH_SIZE} mots par génération (en tâche de fond). Cette tranche compte ≈{trancheWords}{' '}
-        mots au total — relance pour la couvrir, sans doublon (les mots déjà connus sont ignorés).
+        mots au total, relance pour la couvrir, sans doublon (les mots déjà connus sont ignorés).
       </p>
 
       {error !== null && (

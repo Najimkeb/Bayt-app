@@ -78,7 +78,7 @@ function EmptyDomain({ domain }: { domain: DomainOverview }): ReactElement {
       <Mascot mood="encouraging" size="md" priority />
       <p className="text-lg font-extrabold">Ce domaine est encore vide</p>
       <p className="max-w-sm text-sm font-bold text-muted-foreground">
-        Dépose un document — un cours, des notes, un PDF — et j&apos;en fais des cartes rattachées à
+        Dépose un document (un cours, des notes, un PDF) et j&apos;en fais des cartes rattachées à
         « {domain.name} ». On le remplit ensemble ?
       </p>
       <Link

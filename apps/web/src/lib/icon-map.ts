@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Sigma,
   TrendingUp,
+  Zap,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -37,10 +38,11 @@ const ICONS: Record<string, LucideIcon> = {
   BookOpen,
   Globe,
   Languages,
-  // Cartes de l'accueil (révision, bibliothèque, explique).
+  // Cartes de l'accueil (révision, bibliothèque, explique, quiz).
   Layers,
   Library,
   MessageCircle,
+  Zap,
 };
 
 /** Composant d'icône pour un nom donné (repli `Shapes` si inconnu). */

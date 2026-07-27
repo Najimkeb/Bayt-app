@@ -38,6 +38,7 @@ const DOMAINS: DomainList = {
       lessonsCompleted: 1,
       lessonsTotal: 3,
       cardsDue: 0,
+      cardsTotal: 0,
     },
   ],
 };
@@ -71,7 +72,7 @@ function due(count: number): DueQueue {
     now: '2026-03-01T09:00:00.000Z',
     count,
     cards: Array.from({ length: count }, (_v, i) => ({
-      item: { id: `c${String(i)}`, type: 'flashcard' as const, front: 'q', back: 'a' },
+      item: { id: `c${String(i)}`, type: 'flashcard' as const, front: 'q', back: 'a' , domainId: null },
       scheduling: {
         state: 'new' as const,
         stability: 0,
@@ -125,15 +126,15 @@ describe('HomeScreen', () => {
     expect(await screen.findByText('Fondamentaux de la mémorisation')).toBeInTheDocument();
 
     // Terminée → lien ; disponible → lien ; verrouillée → non-lien annoncé.
-    expect(screen.getByRole('link', { name: /Les bases — terminée/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Les bases : terminée/ })).toHaveAttribute(
       'href',
       '/lesson/lesson_demo',
     );
-    expect(screen.getByRole('link', { name: /Répétition espacée — disponible/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Répétition espacée : disponible/ })).toHaveAttribute(
       'href',
       '/lesson/lesson_srs',
     );
-    expect(screen.getByLabelText(/Pratique de rappel — verrouillée/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Pratique de rappel : verrouillée/)).toBeInTheDocument();
     expect(
       screen.queryByRole('link', { name: /Pratique de rappel/ }),
     ).not.toBeInTheDocument();

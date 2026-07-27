@@ -246,7 +246,7 @@ function authErrorMessage(error: AuthError): string {
     return 'E-mail ou mot de passe incorrect.';
   }
   if (status !== undefined && status >= 500) {
-    return 'Erreur serveur — réessaie dans un instant.';
+    return 'Erreur serveur, réessaie dans un instant.';
   }
   if (status === undefined || status === 0) {
     return 'Impossible de joindre le serveur. Vérifie ta connexion, puis réessaie.';

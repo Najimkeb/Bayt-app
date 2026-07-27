@@ -85,6 +85,23 @@ export class D1ReviewRepository implements ReviewRepository {
     return map;
   }
 
+  public async cardCountsByDomain(): Promise<ReadonlyMap<string, number>> {
+    const rows = await this.db
+      .select({ domainId: learningItems.domainId, count: sql<number>`count(*)` })
+      .from(learningItems)
+      .where(isNotNull(learningItems.domainId))
+      .groupBy(learningItems.domainId);
+
+    const map = new Map<string, number>();
+    for (const row of rows) {
+      if (row.domainId !== null) {
+        map.set(row.domainId, Number(row.count));
+      }
+    }
+
+    return map;
+  }
+
   public async countDue(userId: string, now: Date): Promise<number> {
     const rows = await this.db
       .select({ count: sql<number>`count(*)` })
@@ -96,6 +113,24 @@ export class D1ReviewRepository implements ReviewRepository {
       .where(or(isNull(schedulingState.itemId), lte(schedulingState.due, now.getTime())));
 
     return Number(rows[0]?.count ?? 0);
+  }
+
+  public async itemsForQuiz(
+    domainId: string | undefined,
+    limit: number,
+  ): Promise<readonly { id: string; front: string; back: string }[]> {
+    const query = this.db
+      .select({ id: learningItems.id, front: learningItems.front, back: learningItems.back })
+      .from(learningItems);
+    const rows = await (domainId === undefined
+      ? query
+      : query.where(eq(learningItems.domainId, domainId))
+    )
+      // Échantillon aléatoire côté SQLite.
+      .orderBy(sql`random()`)
+      .limit(limit);
+
+    return rows;
   }
 
   public async findCard(userId: string, itemId: string): Promise<ReviewCard | null> {
@@ -183,6 +218,7 @@ function toReviewCard(row: {
       type: row.item.type,
       front: row.item.front,
       back: row.item.back,
+      domainId: row.item.domainId,
     },
     state: row.state === null ? null : toSchedulingState(row.state),
   };

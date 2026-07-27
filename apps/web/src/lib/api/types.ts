@@ -18,6 +18,8 @@ export interface LearningItem {
   readonly type: 'flashcard' | 'cloze' | 'practice_case';
   readonly front: string;
   readonly back: string;
+  /** Domaine de rattachement (badge en révision), ou `null` si non catégorisé. */
+  readonly domainId: string | null;
 }
 
 export interface SchedulingStateDto {

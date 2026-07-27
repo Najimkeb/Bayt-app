@@ -60,7 +60,7 @@ export function FocusSound(): ReactElement {
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={
-          state.enabled ? 'Ambiance sonore (active) — réglages' : 'Ambiance sonore — réglages'
+          state.enabled ? 'Ambiance sonore (active), réglages' : 'Ambiance sonore, réglages'
         }
         title="Ambiance sonore"
         className="relative inline-flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
@@ -174,7 +174,7 @@ export function FocusSound(): ReactElement {
           {/* Discours produit honnête — aucune promesse de performance. */}
           <p className="mt-4 border-t border-border pt-3 text-xs font-bold leading-relaxed text-muted-foreground">
             Une ambiance qui aide certaines personnes à se détendre et à masquer les distractions.
-            Les effets varient beaucoup d&apos;une personne à l&apos;autre — si ça te gêne, coupe-le.
+            Les effets varient beaucoup d&apos;une personne à l&apos;autre. Si ça te gêne, coupe-le.
           </p>
         </div>
       )}

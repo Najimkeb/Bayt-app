@@ -56,6 +56,7 @@ import { UnsupportedFormatError } from '../ingestion/format.js';
 import { presentDocument, presentDocumentCard } from './document-dto.js';
 import { GetDomains } from '../application/use-cases/get-domains.js';
 import { GetDueQueue } from '../application/use-cases/get-due-queue.js';
+import { GetQuiz } from '../application/use-cases/get-quiz.js';
 import { GetLesson } from '../application/use-cases/get-lesson.js';
 import { GetPath } from '../application/use-cases/get-path.js';
 import { GetProfile, ProfileNotFoundError } from '../application/use-cases/get-profile.js';
@@ -85,6 +86,7 @@ import {
   pathQuerySchema,
   previewQuerySchema,
   progressQuerySchema,
+  quizQuerySchema,
   pushSubscriptionBodySchema,
   pushUnsubscribeBodySchema,
   reminderSettingsBodySchema,
@@ -303,6 +305,31 @@ export function createApp({
       count: cards.length,
       cards: cards.map(presentDueCard),
     });
+  });
+
+  /**
+   * Génère un quiz à partir des cartes existantes d'un domaine (ou tous).
+   * **Lecture seule** : ne touche jamais à FSRS (cf. `GetQuiz` / `buildQuiz`).
+   */
+  app.get('/quiz', async (context) => {
+    const query = quizQuerySchema.safeParse({
+      domainId: context.req.query('domainId'),
+      count: context.req.query('count'),
+      types: context.req.query('types'),
+    });
+
+    if (!query.success) {
+      return context.json({ error: 'invalid_request', details: query.error.issues }, 400);
+    }
+
+    const getQuiz = new GetQuiz(repository);
+    const questions = await getQuiz.execute({
+      domainId: query.data.domainId,
+      count: query.data.count,
+      types: query.data.types,
+    });
+
+    return context.json({ questions });
   });
 
   /** Nombre total de cartes dues (badge de navigation, rappels dans l'app). */

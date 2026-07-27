@@ -89,6 +89,24 @@ export const setDailyGoalBodySchema = z.object({
   timezone,
 });
 
+/** Paramètres d'un quiz : domaine (ou tous), nombre de questions, types. */
+export const quizQuerySchema = z.object({
+  domainId: z.string().min(1).max(128).optional(),
+  count: z.coerce.number().int().min(5).max(50).default(10),
+  /** Types autorisés en CSV (`mcq,true_false,fill_blank`) ; vide = tous. */
+  types: z
+    .string()
+    .optional()
+    .transform((value) =>
+      (value ?? '')
+        .split(',')
+        .map((t) => t.trim())
+        .filter((t): t is 'mcq' | 'true_false' | 'fill_blank' =>
+          t === 'mcq' || t === 'true_false' || t === 'fill_blank',
+        ),
+    ),
+});
+
 /** Lecture des réglages de rappel (fuseau pour la préférence par défaut). */
 export const reminderSettingsQuerySchema = z.object({ timezone });
 

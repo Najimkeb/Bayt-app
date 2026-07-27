@@ -30,9 +30,9 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: 'BAYT — Réviser',
+  title: 'BAYT : Réviser',
   description:
-    'BAYT — apprendre pour de bon : rappel actif, répétition espacée et un mentor qui vous accompagne.',
+    'BAYT, apprendre pour de bon : rappel actif, répétition espacée et un mentor qui vous accompagne.',
   applicationName: 'BAYT',
   manifest: '/manifest.webmanifest',
   // Ouverture plein écran depuis l'écran d'accueil iOS (sans barre Safari).

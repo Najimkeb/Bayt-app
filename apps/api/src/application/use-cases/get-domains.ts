@@ -15,6 +15,8 @@ export interface DomainOverview {
   readonly lessonsCompleted: number;
   readonly lessonsTotal: number;
   readonly cardsDue: number;
+  /** Cartes de ce domaine au TOTAL (dues ou non) — sert à l'état « à remplir ». */
+  readonly cardsTotal: number;
 }
 
 /**
@@ -30,11 +32,12 @@ export class GetDomains {
   ) {}
 
   public async execute(userId: string, now: Date): Promise<readonly DomainOverview[]> {
-    const [domains, lessonsByDomain, completed, dueCounts] = await Promise.all([
+    const [domains, lessonsByDomain, completed, dueCounts, cardCounts] = await Promise.all([
       this.path.findDomains(),
       this.path.lessonIdsByDomain(),
       this.path.findCompletedLessonIds(userId),
       this.review.dueCountsByDomain(userId, now),
+      this.review.cardCountsByDomain(),
     ]);
 
     const completedSet = new Set(completed);
@@ -52,6 +55,7 @@ export class GetDomains {
         lessonsCompleted: progress.completed,
         lessonsTotal: progress.total,
         cardsDue: dueCounts.get(domain.id) ?? 0,
+        cardsTotal: cardCounts.get(domain.id) ?? 0,
       };
     });
   }

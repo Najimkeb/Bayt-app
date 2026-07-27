@@ -9,8 +9,8 @@ import { alwaysUser } from '../support/session.js';
 const NOW = new Date('2026-03-01T09:00:00.000Z');
 
 const ITEMS: readonly LearningItemView[] = [
-  { id: 'item-a', type: 'flashcard', front: 'Recto A', back: 'Verso A' },
-  { id: 'item-b', type: 'cloze', front: 'Recto {{c1::B}}', back: 'B' },
+  { id: 'item-a', type: 'flashcard', front: 'Recto A', back: 'Verso A', domainId: null },
+  { id: 'item-b', type: 'cloze', front: 'Recto {{c1::B}}', back: 'B', domainId: null },
 ];
 
 /**

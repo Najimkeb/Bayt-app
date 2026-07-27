@@ -11,7 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'BAYT',
     short_name: 'BAYT',
-    description: 'Apprendre pour de bon — rappel actif, répétition espacée et un mentor bienveillant.',
+    description: 'Apprendre pour de bon : rappel actif, répétition espacée et un mentor bienveillant.',
     start_url: '/',
     display: 'standalone',
     // Aligné sur le crème de l'icône → écran de lancement cohérent (pas de flash blanc).

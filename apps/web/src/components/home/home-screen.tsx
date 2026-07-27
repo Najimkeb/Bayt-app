@@ -57,6 +57,8 @@ export function HomeScreen(): ReactElement {
 
       <ReviewCard />
 
+      <QuizLink />
+
       <ExplainLink />
 
       <LibraryLink />
@@ -90,7 +92,7 @@ function WelcomeMascot({
     : goalMet
       ? 'Objectif du jour atteint, bravo ! Continue sur ta lancée.'
       : dueCount > 0
-        ? `Tu as ${String(dueCount)} carte${dueCount > 1 ? 's' : ''} à réviser aujourd'hui — c'est le meilleur moment pour ancrer.`
+        ? `Tu as ${String(dueCount)} carte${dueCount > 1 ? 's' : ''} à réviser aujourd'hui, c'est le meilleur moment pour ancrer.`
         : 'Prêt à avancer sur ton chemin ? Choisis un domaine.';
 
   return (
@@ -111,7 +113,29 @@ function WelcomeMascot({
   );
 }
 
-/** Accès à la bibliothèque : déposer un document pour générer des cartes. */
+/** Accès à la section Quiz : se tester vite sur ses cartes existantes. */
+function QuizLink(): ReactElement {
+  return (
+    <Link
+      href="/quiz"
+      className="rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+    >
+      <Surface className="flex items-center gap-4 p-5 transition-colors hover:bg-surface-hover">
+        <DomainIcon name="Zap" color="yellow" size="lg" />
+        <div className="flex min-w-0 flex-col">
+          <p className="text-lg font-extrabold">Quiz</p>
+          <p className="text-sm font-bold text-muted-foreground">
+            Teste-toi vite, sur un domaine ou tous, en mode ludique.
+          </p>
+        </div>
+        <span aria-hidden="true" className="ml-auto text-lg text-muted-foreground">
+          ›
+        </span>
+      </Surface>
+    </Link>
+  );
+}
+
 /** Accès au mode « Explique à BAYT ». */
 function ExplainLink(): ReactElement {
   return (
@@ -124,7 +148,7 @@ function ExplainLink(): ReactElement {
         <div className="flex min-w-0 flex-col">
           <p className="text-lg font-extrabold">Explique à BAYT</p>
           <p className="text-sm font-bold text-muted-foreground">
-            Explique-moi un concept — j&apos;évalue ta compréhension.
+            Explique-moi un concept, j&apos;évalue ta compréhension.
           </p>
         </div>
         <span aria-hidden="true" className="ml-auto text-lg text-muted-foreground">
@@ -146,7 +170,7 @@ function LibraryLink(): ReactElement {
         <div className="flex min-w-0 flex-col">
           <p className="text-lg font-extrabold">Bibliothèque</p>
           <p className="text-sm font-bold text-muted-foreground">
-            Dépose un document — j&apos;en fais des cartes à réviser.
+            Dépose un document, j&apos;en fais des cartes à réviser.
           </p>
         </div>
         <span aria-hidden="true" className="ml-auto text-lg text-muted-foreground">
