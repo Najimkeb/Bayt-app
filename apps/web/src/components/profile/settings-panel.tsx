@@ -3,6 +3,8 @@
 import { useState, type CSSProperties, type ReactElement } from 'react';
 
 import { ThemeToggle } from '@/components/theme-toggle';
+import { playCorrect } from '@/lib/audio/feedback-sounds';
+import { useSoundSetting } from '@/lib/audio/use-sound-setting';
 import { useSetDailyGoal } from '@/lib/api/profile-queries';
 import { useUserId } from '@/lib/auth/use-user-id';
 import { paletteFor } from '@/lib/domain-colors';
@@ -72,10 +74,57 @@ export function SettingsPanel({ dailyGoal }: { dailyGoal: number }): ReactElemen
       <div className="flex items-center justify-between gap-3 border-t-2 border-border pt-4">
         <div className="flex flex-col">
           <p className="text-sm font-extrabold">Thème</p>
-          <p className="text-xs font-bold text-muted-foreground">Clair, sombre — ou selon ton système.</p>
+          <p className="text-xs font-bold text-muted-foreground">Clair, sombre, ou selon ton système.</p>
         </div>
         <ThemeToggle />
       </div>
+
+      <SoundRow />
+    </div>
+  );
+}
+
+/** Interrupteur des effets sonores de réponse (activé par défaut). */
+function SoundRow(): ReactElement {
+  const { enabled, setEnabled } = useSoundSetting();
+
+  function toggle(): void {
+    const next = !enabled;
+    setEnabled(next);
+    // À l'activation, un aperçu immédiat (le clic est un geste : le son démarre).
+    if (next) {
+      playCorrect();
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-3 border-t-2 border-border pt-4">
+      <div className="flex flex-col">
+        <p className="text-sm font-extrabold">Sons</p>
+        <p className="text-xs font-bold text-muted-foreground">
+          Un retour sonore court quand tu réponds. Le feedback visuel reste toujours là.
+        </p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        aria-label="Activer les sons de réponse"
+        onClick={toggle}
+        className={[
+          'relative h-8 w-14 shrink-0 rounded-full border-2 transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+          enabled ? 'border-feather-green bg-feather-green' : 'border-border bg-surface-hover',
+        ].join(' ')}
+      >
+        <span
+          aria-hidden="true"
+          className={[
+            'absolute top-1/2 size-6 -translate-y-1/2 rounded-full bg-white shadow transition-all',
+            enabled ? 'left-[calc(100%-1.6rem)]' : 'left-0.5',
+          ].join(' ')}
+        />
+      </button>
     </div>
   );
 }

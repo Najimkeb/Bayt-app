@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 
 import { useLesson, useSubmitAnswer } from '@/lib/api/lesson-queries';
+import { playCorrect, playWrong, primeSound } from '@/lib/audio/feedback-sounds';
 import { useUserId } from '@/lib/auth/use-user-id';
 import type { AnswerResult, ExerciseAnswer, PresentedExercise } from '@/lib/api/lesson-types';
 import { useCompleteLesson } from '@/lib/api/path-queries';
@@ -88,11 +89,21 @@ export function LessonSession({ lessonId }: { lessonId: string }): ReactElement 
       return;
     }
 
+    // Geste utilisateur : on démarre l'AudioContext ici pour pouvoir jouer le
+    // son au retour de la correction (callback asynchrone).
+    primeSound();
+
     submit.mutate(
       { exerciseId: current.id, answer: draft, assisted: assisted.has(current.id) },
       {
         onSuccess: (answerResult) => {
           setResult(answerResult);
+          // Retour sonore ponctuel (le feedback visuel reste porté par FeedbackBar).
+          if (answerResult.correct) {
+            playCorrect();
+          } else {
+            playWrong();
+          }
 
           // Un exercice réussi rapporte de l'XP (la gamification est distincte du
           // moteur FSRS, qui a déjà enregistré la révision côté API).

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactElement } from 're
 import { useIncrementProgress } from '@/lib/api/progress-queries';
 import { useDueQueue, usePreview, useSubmitReview } from '@/lib/api/queries';
 import { useSync } from '@/lib/offline/sync-provider';
+import { playCorrect, playWrong } from '@/lib/audio/feedback-sounds';
 import { useUserId } from '@/lib/auth/use-user-id';
 import type { ReviewGrade } from '@/lib/api/types';
 import { formatInterval } from '@/lib/format-interval';
@@ -97,12 +98,18 @@ export function ReviewSession({ domainId }: { domainId?: string | undefined } = 
 
       setLastGrade(value);
       setReaction(moodForGrade(value));
+      const positive = POSITIVE_GRADES.includes(value);
       setFlash({
         nonce: Date.now(),
-        color: POSITIVE_GRADES.includes(value)
-          ? 'var(--color-feather-green)'
-          : 'var(--color-cardinal)',
+        color: positive ? 'var(--color-feather-green)' : 'var(--color-cardinal)',
       });
+      // Retour sonore ponctuel — appelé dans le geste (clic/clavier), donc
+      // l'AudioContext peut démarrer. Le feedback visuel (flash + libellé) reste.
+      if (positive) {
+        playCorrect();
+      } else {
+        playWrong();
+      }
 
       submit.mutate(
         { card, grade: value },
