@@ -1,3 +1,4 @@
+import { cleanDashes } from '../../text/clean-dashes.js';
 import type { LLMProvider } from '../llm/provider.js';
 import {
   SOURCED_CARDS_JSON_SCHEMA,
@@ -29,6 +30,8 @@ const SYSTEM_PROMPT = [
   'Règles STRICTES :',
   '- une seule idée par carte ; la question (front) force le rappel actif ;',
   '- reste strictement factuel et fidèle aux sources ;',
+  "- dans le front et le back, n'utilise JAMAIS le tiret cadratin « — » ni le demi-",
+  '  cadratin « – » ; emploie une ponctuation simple (virgule, point, deux-points) ;',
   "- INTERDICTION d'inventer un chiffre, une date, un nom propre ou une référence.",
   "  Si un fait n'est pas certain d'après les sources, écris « [À VÉRIFIER] » dans la",
   '  réponse en précisant brièvement la raison ;',
@@ -91,7 +94,13 @@ export class SourcedCardGenerator {
         const cards = parseSourcedCards(raw, allowedUrls);
         const deduped = dedupeByFront(cards);
         if (deduped.length > 0) {
-          return deduped.slice(0, this.maxCards);
+          // Nettoie les tirets cadratins du contenu de carte (front/back). On NE
+          // touche PAS à `sourceExtract` : c'est une citation verbatim de la source.
+          return deduped.slice(0, this.maxCards).map((card) => ({
+            ...card,
+            front: cleanDashes(card.front),
+            back: cleanDashes(card.back),
+          }));
         }
         lastError = new SourcedGenerationError('Aucune carte adossée à une source');
       } catch (error) {

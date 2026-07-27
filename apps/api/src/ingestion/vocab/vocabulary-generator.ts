@@ -30,6 +30,8 @@ const SYSTEM_PROMPT = [
   '- pour chaque mot : traduction française juste, catégorie grammaticale, UNE phrase',
   "  d'exemple simple et naturelle en anglais, et sa traduction française fidèle ;",
   '- n’invente pas de mot ni de sens ; si un doute, choisis le sens le plus courant ;',
+  "- n'utilise JAMAIS le tiret cadratin « — » ni le demi-cadratin « – » dans les",
+  '  traductions et exemples ; emploie une ponctuation simple (virgule, parenthèses) ;',
   '- NE répète PAS les mots déjà fournis (liste EXCLURE).',
   'Réponds UNIQUEMENT par du JSON valide, sans texte autour :',
   '{"words":[{"word":"...","translation":"...","category":"...","example":"...","exampleTranslation":"..."}]}',

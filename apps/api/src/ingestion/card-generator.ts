@@ -1,3 +1,5 @@
+import { cleanDashes } from '../text/clean-dashes.js';
+
 import { CARDS_JSON_SCHEMA, CardParseError, parseCards, type GeneratedCard } from './card-schema.js';
 import { dedupeCards } from './dedup.js';
 import type { LLMProvider } from './llm/provider.js';
@@ -19,6 +21,8 @@ const SYSTEM_PROMPT = [
   "- la question (front) force le rappel actif : elle interroge, ne se contente pas d'un intitulé ;",
   '- la réponse (back) est concise et exacte ;',
   "- pas de carte triviale ni de simple paraphrase de l'énoncé ;",
+  "- n'utilise JAMAIS le tiret cadratin « — » ni le demi-cadratin « – » ; emploie une",
+  '  ponctuation simple (virgule, point, deux-points, parenthèses) ;',
   '- réponds UNIQUEMENT par du JSON valide, sans texte autour, au format :',
   '{"cards":[{"front":"...","back":"..."}]}',
 ].join('\n');
@@ -87,7 +91,13 @@ export class CardGenerator {
       }
 
       try {
-        return dedupeCards(parseCards(raw)).slice(0, this.#maxCards);
+        // Filet de sécurité : on nettoie les tirets cadratins même si le modèle
+        // ignore la consigne (double filet prompt + post-traitement).
+        const cards = dedupeCards(parseCards(raw))
+          .slice(0, this.#maxCards)
+          .map((card) => ({ front: cleanDashes(card.front), back: cleanDashes(card.back) }));
+
+        return cards;
       } catch (error) {
         if (error instanceof CardParseError) {
           lastError = error;

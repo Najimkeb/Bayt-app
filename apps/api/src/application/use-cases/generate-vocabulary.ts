@@ -1,5 +1,6 @@
 import { normalizeText } from '@bayt/domain';
 
+import { cleanDashes } from '../../text/clean-dashes.js';
 import type { IngestionQueue } from '../ports/ingestion-queue.js';
 import type { VocabularyGenerator } from '../../ingestion/vocab/vocabulary-generator.js';
 import type { VocabWord } from '../../ingestion/vocab/vocab-schema.js';
@@ -193,10 +194,11 @@ export class RunVocabularyGeneration {
     return words.map((word, i) => ({
       id: this.newId(),
       draftId: input.draftId,
-      front: word.word,
-      back: composeBack(word),
-      sourceUrl: `Fréquence anglais · rang ${String(input.tranche.start)}–${String(input.tranche.end)}`,
-      sourceExtract: `${word.example} — ${word.exampleTranslation}`,
+      front: cleanDashes(word.word),
+      back: cleanDashes(composeBack(word)),
+      // Libellé de rang : « à » plutôt qu'un tiret (cohérent avec la consigne).
+      sourceUrl: `Fréquence anglais · rang ${String(input.tranche.start)} à ${String(input.tranche.end)}`,
+      sourceExtract: cleanDashes(`${word.example} (${word.exampleTranslation})`),
       auditVerdict: 'ok',
       auditReason: null,
       status: 'to_review',

@@ -1,3 +1,4 @@
+import { cleanDashes } from '../text/clean-dashes.js';
 import type { LLMProvider } from '../ingestion/llm/provider.js';
 import {
   EVALUATION_JSON_SCHEMA,
@@ -23,6 +24,7 @@ const SYSTEM_PROMPT = [
   '- corrige EXPLICITEMENT toute erreur factuelle ; si tu n\'es pas certain d\'un fait,',
   '  dis-le clairement (« je ne suis pas sûr, à vérifier ») ;',
   '- n\'infantilise jamais, pas de jargon, pas de nom de méthode ;',
+  '- n\'utilise JAMAIS le tiret cadratin « — » ni le demi-cadratin « – » ; ponctuation simple ;',
   '- pose 1 à 2 questions de relance ciblées sur les points faibles ;',
   '- termine par une reformulation claire du concept.',
   'Rédige tous les textes à la première personne, en français, ton mentor.',
@@ -45,6 +47,18 @@ export class EvaluationError extends Error {
   public override readonly name = 'EvaluationError';
 }
 
+/** Nettoie les tirets cadratins du feedback (double filet avec la consigne). */
+function cleanEvaluation(evaluation: Evaluation): Evaluation {
+  return {
+    ...evaluation,
+    strengths: evaluation.strengths.map(cleanDashes),
+    gaps: evaluation.gaps.map(cleanDashes),
+    corrections: evaluation.corrections.map(cleanDashes),
+    followUps: evaluation.followUps.map(cleanDashes),
+    reformulation: cleanDashes(evaluation.reformulation),
+  };
+}
+
 export class ExplanationEvaluator {
   public constructor(
     private readonly provider: LLMProvider,
@@ -64,7 +78,7 @@ export class ExplanationEvaluator {
           schema: EVALUATION_JSON_SCHEMA,
         });
 
-        return parseEvaluation(raw);
+        return cleanEvaluation(parseEvaluation(raw));
       } catch (error) {
         lastError = error;
         if (!(error instanceof EvaluationParseError)) {
